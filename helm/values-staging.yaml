@@ -1,0 +1,81 @@
+replicaCount: 1
+
+image:
+  repository: 
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets:
+  - name: docker-registry-secret
+
+
+resources:
+  limits:
+    memory: "512Mi"
+  requests:
+    memory: "256Mi"  
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 3000
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 15
+  periodSeconds: 5
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: false
+  # className: "nginx"
+  # annotations: 
+  #   kubernetes.io/ingress.class: nginx
+  #   kubernetes.io/ingress.global-static-ip-name: gke-ingress-static-ip
+  #   cert-manager.io/cluster-issuer: "letsencrypt-http"
+  #   nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # hosts:
+  #   - host: api.uhs.is
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # tls:
+  #   - hosts:
+  #       - api.uhs.is
+  #     secretName: api-tls
+
+# Новая секция configmap
+configmap:
+  enabled: true
+  name: values-bot
+  data:
+    PORT: 3000
+
+# Секция для секретов
+secrets:
+  enabled: false
+  name: secret-values
+  data:
+
+# точечно выгрузить переменную из vault
+deployment:
+  envVars:
+#     API_KEY: "vault:secret/data/metastate-bot/config#testit"
