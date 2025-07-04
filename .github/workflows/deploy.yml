@@ -1,0 +1,243 @@
+# ======================================================================
+#  Build & Deploy (branch / semver‑tag)  +  Rollback (tag или history)
+# ======================================================================
+name: 'Build and Deploy (or Rollback) to GKE'
+
+on:
+  push:
+    branches: [ main, canary ]
+    tags:     [ 'v*.*.*' ]                 # semver → prod
+  workflow_dispatch:
+    inputs:
+      # --- build / deploy ---
+      image:          { description: 'Docker image override', required: false, default: '' }
+      force_build:    { description: 'true → force Docker build', required: false, default: 'false' }
+      # --- history‑rollback ---
+      rollback:       { description: 'true → helm rollback', required: false, default: 'false' }
+      rollback_revision: { description: 'Helm revision (empty → previous)', required: false, default: '' }
+      # --- tag‑rollback ---
+      rollback_to_tag: { description: 'Redeploy with specific Docker tag', required: false, default: '' }
+      rollback_namespace: { description: 'Namespace override for rollback', required: false, default: '' }
+
+env:
+  PROJECT_ID:  ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: us
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GKE_REGION:  ${{ secrets.GKE_REGION }}
+  REPOSITORY:  gcr.io
+  WORKLOAD_IDENTITY_PROVIDER: "projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+  SERVICE_ACCOUNT_EMAIL: "github-deploy@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+
+  TAG_NAME:        ${{ startsWith(github.ref,'refs/tags/') && github.ref_name || '' }}
+  DEPLOY_NAMESPACE: ${{ startsWith(github.ref,'refs/tags/') && 'metaapp-prod' || format('metaapp-{0}', github.ref_name) }}
+
+  TOKEN_GITHUB:   ${{ secrets.TOKEN_GITHUB }}      # ← используется в docker build
+  NPMRC_TOKEN:    ${{ secrets.NPMRC_TOKEN }}
+  NEXT_PUBLIC_BOT_TOKEN:     ${{ secrets.NEXT_PUBLIC_BOT_TOKEN }}
+  NEXT_PUBLIC_GRAPHQL_URL:   ${{ secrets.NEXT_PUBLIC_GRAPHQL_URL }}
+  NEXT_PUBLIC_BOT_USERNAME:  ${{ secrets.NEXT_PUBLIC_BOT_USERNAME }}
+
+permissions:
+  id-token: write
+  contents:  read
+
+# --------------------------------------------------------------------
+# BUILD + DEPLOY
+# --------------------------------------------------------------------
+jobs:
+  build-deploy:
+    if: >-
+      ${{ github.event.inputs.rollback != 'true' &&
+          github.event.inputs.rollback_to_tag == '' }}
+    runs-on: ubuntu-latest
+
+    steps:
+    # checkout + diff -------------------------------------------------
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: diff
+        uses: tj-actions/changed-files@v36
+        with:
+          files: '**/*'
+          files_ignore: |
+            helm/**
+
+      - name: Set flags
+        run: |
+          echo "CHANGES=${{ steps.diff.outputs.any_modified == 'true' }}" >> $GITHUB_ENV
+          echo "FORCE=${{ github.event.inputs.force_build }}"            >> $GITHUB_ENV
+          echo "IS_TAG=${{ startsWith(github.ref,'refs/tags/') }}"       >> $GITHUB_ENV
+
+    # auth ------------------------------------------------------------
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account:           ${{ env.SERVICE_ACCOUNT_EMAIL }}
+
+    # manual image override ------------------------------------------
+      - name: Manual image?
+        run: |
+          if [[ -n "${{ github.event.inputs.image }}" ]]; then
+            echo "USE_MANUAL=true"  >> $GITHUB_ENV
+            echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+          else
+            echo "USE_MANUAL=false" >> $GITHUB_ENV
+            echo "IMAGE=" >> $GITHUB_ENV
+          fi
+
+    # build / push ----------------------------------------------------
+      - name: Docker login
+        if: ${{ env.IS_TAG == 'true' || env.CHANGES == 'true' || env.FORCE == 'true' }}
+        run: |
+          gcloud auth print-access-token \
+          | docker login -u oauth2accesstoken --password-stdin \
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev
+
+      - name: Build & push
+        if: ${{ env.IS_TAG == 'true' || env.CHANGES == 'true' || env.FORCE == 'true' }}
+        run: |
+          REPO=${GITHUB_REPOSITORY##*/}
+          BR=${GITHUB_REF#refs/heads/}; BR=${BR//\//-}
+          BASE="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/$REPO"
+          HASH="$BASE:${BR}-${GITHUB_SHA}"
+          [[ "$IS_TAG" == 'true' ]] && TAG="$BASE:${{ env.TAG_NAME }}"
+
+          build_cmd="docker build --build-arg TOKEN_GITHUB=$TOKEN_GITHUB \
+                                   --build-arg GITHUB_TOKEN=$NPMRC_TOKEN \
+                                   --build-arg NEXT_PUBLIC_BOT_TOKEN=$NEXT_PUBLIC_BOT_TOKEN \
+                                   --build-arg NEXT_PUBLIC_GRAPHQL_URL=$NEXT_PUBLIC_GRAPHQL_URL \
+                                   --build-arg NEXT_PUBLIC_BOT_USERNAME=$NEXT_PUBLIC_BOT_USERNAME \
+                                   -t \"$HASH\""
+          [[ -n "$TAG" ]] && build_cmd="$build_cmd -t \"$TAG\""
+          eval "$build_cmd ."
+
+          docker push "$HASH"
+          [[ -n "$TAG" ]] && docker push "$TAG"
+          echo "IMAGE=${TAG:-$HASH}" >> $GITHUB_ENV
+
+    # cluster creds ---------------------------------------------------
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location:     ${{ env.GKE_REGION }}
+
+      - name: Set release
+        run: echo "RELEASE=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+    # vault suffix ----------------------------------------------------
+      - name: Vault suffix
+        run: |
+          [[ "$DEPLOY_NAMESPACE" == "metaapp-prod" ]] \
+            && echo "VAULT_SUFFIX=config-prod" \
+            || echo "VAULT_SUFFIX=config" \
+            >> $GITHUB_ENV
+
+    # values override -------------------------------------------------
+      - name: Helm values override
+        run: |
+          echo "VALUES_FILE=./helm/values.yaml" >> $GITHUB_ENV
+          case "$DEPLOY_NAMESPACE" in
+            metaapp-prod) echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"   >> $GITHUB_ENV ;;
+            metaapp-main) echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml" >> $GITHUB_ENV ;;
+            *)            echo "VALUES_OVERRIDE=" >> $GITHUB_ENV ;;
+          esac
+
+    # helm upgrade ----------------------------------------------------
+      - name: Helm upgrade
+        if: >-
+          ${{ env.CHANGES == 'true' || env.USE_MANUAL == 'true' ||
+              env.IS_TAG == 'true'  || env.FORCE == 'true' }}
+        run: |
+          helm upgrade --install "$RELEASE" ./helm \
+            --set image.repository="${IMAGE%:*}" \
+            --set image.tag="${IMAGE##*:}" \
+            --set vault.envPathSuffix="${VAULT_SUFFIX}" \
+            --namespace "$DEPLOY_NAMESPACE" \
+            --create-namespace \
+            -f "$VALUES_FILE" $VALUES_OVERRIDE
+
+# --------------------------------------------------------------------
+# ROLLBACK
+# --------------------------------------------------------------------
+  rollback:
+    if: >-
+      ${{ github.event.inputs.rollback == 'true' ||
+          github.event.inputs.rollback_to_tag != '' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account:           ${{ env.SERVICE_ACCOUNT_EMAIL }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location:     ${{ env.GKE_REGION }}
+
+      - name: Vars
+        run: |
+          RELEASE=${GITHUB_REPOSITORY##*/}
+          if [[ -n "${{ github.event.inputs.rollback_namespace }}" ]]; then
+            NS=${{ github.event.inputs.rollback_namespace }}
+          elif [[ "${{ startsWith(github.ref,'refs/tags/') }}" == 'true' ]]; then
+            NS=metaapp-prod
+          else
+            BR=${GITHUB_REF#refs/heads/}; NS=metaapp-${BR//\//-}
+          fi
+          echo "RELEASE=$RELEASE" >> $GITHUB_ENV
+          echo "NS=$NS"           >> $GITHUB_ENV
+
+    # vault suffix + values override ---------------------------------
+      - name: Vault suffix
+        run: |
+          [[ "$NS" == "metaapp-prod" ]] \
+            && echo "VAULT_SUFFIX=config-prod" \
+            || echo "VAULT_SUFFIX=config" \
+            >> $GITHUB_ENV
+
+      - name: Helm values override
+        run: |
+          echo "VALUES_FILE=./helm/values.yaml" >> $GITHUB_ENV
+          case "$NS" in
+            metaapp-prod) echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"   >> $GITHUB_ENV ;;
+            metaapp-main) echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml" >> $GITHUB_ENV ;;
+            *)            echo "VALUES_OVERRIDE=" >> $GITHUB_ENV ;;
+          esac
+
+    # redeploy by tag -------------------------------------------------
+      - name: Redeploy with tag
+        if: ${{ github.event.inputs.rollback_to_tag != '' }}
+        run: |
+          TAG=${{ github.event.inputs.rollback_to_tag }}
+          IMG="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${RELEASE}:$TAG"
+          helm upgrade --install "$RELEASE" ./helm \
+            --set image.repository="${IMG%:*}" \
+            --set image.tag="${IMG##*:}" \
+            --set vault.envPathSuffix="${VAULT_SUFFIX}" \
+            --namespace "$NS" \
+            -f "$VALUES_FILE" $VALUES_OVERRIDE
+
+    # rollback by history --------------------------------------------
+      - name: Determine revision
+        if: ${{ github.event.inputs.rollback_to_tag == '' }}
+        id: rev
+        run: |
+          if [[ -n "${{ github.event.inputs.rollback_revision }}" ]]; then
+            echo "REV=${{ github.event.inputs.rollback_revision }}" >> $GITHUB_ENV
+          else
+            CUR=$(helm history "$RELEASE" -n "$NS" -o json | jq -r '.[-1].revision')
+            echo "REV=$((CUR-1))" >> $GITHUB_ENV
+          fi
+
+      - name: Helm rollback
+        if: ${{ github.event.inputs.rollback_to_tag == '' }}
+        run: |
+          helm rollback "$RELEASE" "$REV" --namespace "$NS"
