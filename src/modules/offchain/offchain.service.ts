@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { TransactionPromise } from 'neo4j-driver-core';
+import { TransactionPromise } from "neo4j-driver-core";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
 import { BaseMarkService } from "src/core/mark/base-makrs.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
@@ -18,7 +18,7 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
 
   /**
    * Создание новой оффчейн-марк
-   * @param markData 
+   * @param markData
    */
   protected async create(markData: IOffchainMark, tx: TransactionPromise): Promise<void> {
     try {
@@ -28,8 +28,8 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         markType: markData.markType,
         value: markData.value,
       };
-      
-      const query = /*cypher*/`
+
+      const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId}), (to:Participant {participantId: $toParticipantId})
         MERGE (type:MarkType {name: $markType, onchain: ${this.onchain}})
         CREATE (mark:Mark {
@@ -40,18 +40,18 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         })
         CREATE (from)-[:GAVE]->(mark)-[:ABOUT]->(to)
         CREATE (mark)-[:OF_TYPE]->(type)
-      `
+      `;
 
       await tx.run(query, queryParams);
-    } catch(e) {
-      this.logger.error('Error creating new mark', e);
+    } catch (e) {
+      this.logger.error("Error creating new mark", e);
       throw e;
     }
   }
 
   /**
    * Обновление существующей оффчейн-марк
-   * @param markData 
+   * @param markData
    */
   protected async update(markData: IOffchainMark, tx: TransactionPromise): Promise<void> {
     try {
@@ -62,16 +62,16 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         value: markData.value,
       };
 
-      const query = /*cypher*/`
+      const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
         SET mark.value = $value,
             mark.updatedAt = datetime()
-      `
+      `;
 
       await tx.run(query, queryParams);
-    } catch(e) {
-      this.logger.error('Error updating existing mark', e);
+    } catch (e) {
+      this.logger.error("Error updating existing mark", e);
       throw e;
     }
   }

@@ -56,7 +56,7 @@ const imports = [
   Neo4jModule.forRootAsync(),
   OnchainModule,
   OffchainModule,
-  EventsModule
+  EventsModule,
 ];
 
 @Module({

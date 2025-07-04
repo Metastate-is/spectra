@@ -2,13 +2,16 @@
 
 import { Kafka, logLevel } from "kafkajs";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
-import { MarkCreate, OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/citadel/v1/mark_create";
+import {
+  MarkCreate,
+  OffchainMarkType,
+} from "@metastate-is/proto-models/generated/metastate/kafka/citadel/v1/mark_create";
 import { Timestamp } from "@metastate-is/proto-models/generated/google/protobuf/timestamp";
 
 const timestamp: Timestamp = {
   seconds: Date.now() / 1000,
   nanos: 0,
-}
+};
 const samplePayload: MarkCreate = {
   id: "test-mark-123",
   createdAt: timestamp,

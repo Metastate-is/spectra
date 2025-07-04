@@ -1,7 +1,7 @@
 import { DynamicModule, Global, Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import neo4j, { Driver } from "neo4j-driver";
-import { Neo4jService } from './neo4j.service';
+import { Neo4jService } from "./neo4j.service";
 
 @Global()
 @Module({

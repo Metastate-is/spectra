@@ -22,7 +22,8 @@ export function OtelHistogram(
   return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
     const className = target.constructor.name;
     const methodName = propertyKey;
-    const metricFullName = metricName || `spectra_${className.toLowerCase()}_${methodName}_duration`;
+    const metricFullName =
+      metricName || `spectra_${className.toLowerCase()}_${methodName}_duration`;
 
     let histogram: Histogram<string>;
 

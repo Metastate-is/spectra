@@ -3,8 +3,8 @@
  * ПОРЯДОК ВАЖЕН!!!
  */
 export enum OffchainMarkType {
-  RELATION = 'RelationMark',
-  BUSINESS_FEEDBACK = 'BusinessFeedback',
+  RELATION = "RelationMark",
+  BUSINESS_FEEDBACK = "BusinessFeedback",
 }
 
 /**
@@ -12,9 +12,8 @@ export enum OffchainMarkType {
  * ПОРЯДОК ВАЖЕН!!!
  */
 export enum OnchainMarkType {
-  TRUST = 'TrustMark',
+  TRUST = "TrustMark",
 }
-
 
 export const OffchainMarkTypeMap: Record<number, OffchainMarkType | null> = {
   0: null, // UNSPECIFIED

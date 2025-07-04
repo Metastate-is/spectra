@@ -126,7 +126,7 @@ describe("KafkaService", () => {
 
       const result = await service.sendAchievementCreated(message);
 
-      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.QUEST.ACHIEVEMENT.CREATED,message);
+      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.QUEST.ACHIEVEMENT.CREATED, message);
       expect(result).toEqual({ status: "ok" });
     });
   });

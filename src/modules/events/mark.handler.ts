@@ -34,8 +34,8 @@ export class MarkHandler {
 
       this.logger.log(`Processing mark create event for mark`, {
         meta: {
-          data
-        }
+          data,
+        },
       });
       const fromParticipantId = data.fromParticipantId;
       const toParticipantId = data.toParticipantId;
@@ -43,8 +43,8 @@ export class MarkHandler {
       if (!fromParticipantId || !toParticipantId) {
         this.logger.warn("Unknown participant id", {
           meta: {
-            data
-          }
+            data,
+          },
         });
         return;
       }
@@ -54,11 +54,10 @@ export class MarkHandler {
         return;
       }
 
-      // Находим тип марки по полю is_onchain 
+      // Находим тип марки по полю is_onchain
       // чтобы определить какой enum использовать для получения события
 
       await this.processMark(data);
-
     } catch (error) {
       this.logger.error("Error processing mark create event", error);
     } finally {
@@ -66,38 +65,35 @@ export class MarkHandler {
     }
   }
 
-  async processMark(
-    data: MarkCreate
-  ): Promise<boolean | void> {
+  async processMark(data: MarkCreate): Promise<boolean | void> {
     try {
       if (data.isOnchain) {
         if (!isValidOnchainMarkType(data.onchainMarkType)) {
           return this.logMarkTypeError("onchain", data);
         }
-    
+
         const result = await this.onchainService.process({
           fromParticipantId: data.fromParticipantId,
           toParticipantId: data.toParticipantId,
           markType: data.onchainMarkType,
-          value: data.value
+          value: data.value,
         });
-    
+
         if (!result) {
           this.logger.debug("Error processing create onchain mark", { meta: { data } });
         }
-    
       } else {
         if (!isValidOffchainMarkType(data.offchainMarkType)) {
           return this.logMarkTypeError("offchain", data);
         }
-    
+
         const result = await this.offchainService.process({
           fromParticipantId: data.fromParticipantId,
           toParticipantId: data.toParticipantId,
           markType: data.offchainMarkType,
-          value: data.value
+          value: data.value,
         });
-    
+
         if (!result) {
           this.logger.debug("Error processing create offchain mark", { meta: { data } });
         }

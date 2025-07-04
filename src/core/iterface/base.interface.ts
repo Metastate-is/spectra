@@ -1,4 +1,3 @@
-
 export interface IBaseMark {
   fromParticipantId: string;
   toParticipantId: string;
