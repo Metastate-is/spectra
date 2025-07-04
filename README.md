@@ -40,6 +40,11 @@ npm install
 cp .env.example .env
 ```
 
+4. Инициализируйте базу данных Neo4j:
+```bash
+npm run cli init-neo4j
+```
+
 ### Запуск разработки
 
 ```bash

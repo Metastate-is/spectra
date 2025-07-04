@@ -18,6 +18,9 @@ RUN npm ci
 COPY . .
 
 # Собираем приложение
-
 RUN npm run build
+
+# Инициализируем базу данных Neo4j
+RUN npm run cli init-neo4j
+
 CMD ["npm", "run", "start:prod"]
