@@ -3,6 +3,7 @@ import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/commo
 import { ClientKafka } from "@nestjs/microservices";
 import { StructuredLoggerService } from "../logger";
 import { AchievementCreated } from "@metastate-is/proto-models/generated/metastate/kafka/quest/v1/achievement_created";
+import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 
 /**
  * Сервис для работы с Kafka
@@ -131,4 +132,33 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
   }
+
+    /**
+   * Отправка сообщения о создании достижения
+   * @param markCreatedMessage Сообщение о создании достижения
+   * @returns Promise<RecordMetadata> Метаданные записи
+   */
+    async sendMarkCreated(markCreatedMessage: MarkCreated): Promise<any> {
+      const topic = KAFKA_TOPICS.SPECTRA.MARK.CREATED;
+  
+      this.l.info("Sending mark created message to Kafka", {
+        meta: { topic, message: markCreatedMessage },
+      });
+  
+      try {
+        const result = await this.send(topic, markCreatedMessage);
+        if (result) {
+          this.l.info("Mark created message sent successfully", {
+            meta: { result },
+          });
+        } else {
+          this.l.info("[WARN] Mark created message was not sent to Kafka");
+        }
+        return result;
+      } catch (error) {
+        this.l.error("Failed to send mark created message", error as Error);
+        // Не пробрасываем ошибку дальше, чтобы не блокировать работу приложения
+        return null;
+      }
+    }
 }

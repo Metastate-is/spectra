@@ -5,14 +5,14 @@
  * and decoding them from Protobuf to JSON.
  *
  * Usage:
- * ts-node kafka-protobuf-consumer.ts [created]
+ * ts-node kafka-protobuf-consumer.ts [request]
  *
  * Parameters:
- * - created: subscribe to citadel.mark.created.v1 (default)
+ * - request: subscribe to spectra.mark.request.v1 (default)
  */
 
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
-import { MarkCreate } from "@metastate-is/proto-models/generated/metastate/kafka/citadel/v1/mark_create";
+import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 import { Kafka, logLevel } from "kafkajs";
 
 /**
@@ -20,10 +20,10 @@ import { Kafka, logLevel } from "kafkajs";
  */
 async function consumeRelationMessages() {
   // Determine topic and decoder based on args
-  const topicName = KAFKA_TOPICS.CITADEL.MARK.CREATED;
-  const decoder = MarkCreate;
+  const topicName = KAFKA_TOPICS.SPECTRA.MARK.REQUEST;
+  const decoder = MarkRequest;
 
-  console.log("Starting Kafka consumer for citadel.mark.created.v1 topic");
+  console.log("Starting Kafka consumer for spectra.mark.request.v1 topic");
 
   // Creating Kafka client
   const kafka = new Kafka({

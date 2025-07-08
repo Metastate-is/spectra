@@ -2,23 +2,21 @@
 
 import { Kafka, logLevel } from "kafkajs";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
-import {
-  MarkCreate,
-  OffchainMarkType,
-} from "@metastate-is/proto-models/generated/metastate/kafka/citadel/v1/mark_create";
 import { Timestamp } from "@metastate-is/proto-models/generated/google/protobuf/timestamp";
+import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
+import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
 
 const timestamp: Timestamp = {
   seconds: Date.now() / 1000,
   nanos: 0,
 };
-const samplePayload: MarkCreate = {
+const samplePayload: MarkRequest = {
   id: "test-mark-123",
   createdAt: timestamp,
   fromParticipantId: "test-participant-123",
   toParticipantId: "test-participant-456",
   isOnchain: false,
-  offchainMarkType: OffchainMarkType.OFFCHAIN_MARK_TYPE_RELATION,
+  offchainMarkType: OffchainMarkType.OFFCHAIN_MARK_TYPE_BUSINESS_FEEDBACK,
   value: true,
   metadata: {
     eventId: "test-event-123",
@@ -37,10 +35,10 @@ async function produceMessage() {
   const producer = kafka.producer();
   await producer.connect();
 
-  const topicName = KAFKA_TOPICS.CITADEL.MARK.CREATED;
+  const topicName = KAFKA_TOPICS.SPECTRA.MARK.REQUEST;
 
   // Create the protobuf message
-  const message = MarkCreate.encode(samplePayload).finish();
+  const message = MarkRequest.encode(samplePayload).finish();
 
   await producer.send({
     topic: topicName,

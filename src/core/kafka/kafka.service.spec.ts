@@ -2,6 +2,8 @@ import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { ClientKafka } from "@nestjs/microservices";
 import { Test, TestingModule } from "@nestjs/testing";
 import { KafkaService } from "./kafka.service";
+import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
+import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 
 describe("KafkaService", () => {
   let service: KafkaService;
@@ -108,25 +110,27 @@ describe("KafkaService", () => {
     });
   });
 
-  describe("sendAchievementCreated", () => {
-    it("should send achievement created message to Kafka", async () => {
-      const message = {
-        achievementId: "123",
-        createdAt: { milliseconds: Date.now() },
+  describe("sendMarkCreated", () => {
+    it("should send mark created message to Kafka", async () => {
+      const message: MarkRequest = {
+        id: "123",
+        createdAt: { seconds: Date.now(), nanos: 0 },
         metadata: {
           eventId: "123",
           schemaVersion: "1",
-          eventTime: { milliseconds: Date.now() },
+          eventTime: { milliseconds: Date.now()},
         },
-        telegram: {
-          userId: 123,
-        },
+        fromParticipantId: '1',
+        toParticipantId: '2',
+        offchainMarkType: OffchainMarkType.OFFCHAIN_MARK_TYPE_BUSINESS_FEEDBACK,
+        value: true,
+        isOnchain: false
       };
       const sendSpy = jest.spyOn(service, "send").mockResolvedValue({ status: "ok" });
 
-      const result = await service.sendAchievementCreated(message);
+      const result = await service.sendMarkCreated(message);
 
-      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.QUEST.ACHIEVEMENT.CREATED, message);
+      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.SPECTRA.MARK.CREATED, message);
       expect(result).toEqual({ status: "ok" });
     });
   });
