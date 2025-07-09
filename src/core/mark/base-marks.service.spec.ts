@@ -3,6 +3,7 @@ import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { BaseMarkService } from "./base-makrs.service";
 import { TransactionPromise } from "neo4j-driver-core";
 import { IOffchainMark } from "../iterface/offchain.interface";
+import { formatEventPayload } from "src/utils/kafka/format-event-created";
 
 class TestMarkService extends BaseMarkService<IOffchainMark> {
   protected readonly onchain = false;
@@ -25,13 +26,17 @@ class TestMarkService extends BaseMarkService<IOffchainMark> {
     return this.process(mark);
   }
 
-  async create(mark: IOffchainMark, tx: TransactionPromise): Promise<void> {
+  async create(mark: IOffchainMark, tx: TransactionPromise): Promise<IOffchainMark> {
     // Просто эмуляция успешного создания
-    return Promise.resolve();
+    return Promise.resolve(mark);
   }
 
   async update(mark: IOffchainMark, tx: TransactionPromise): Promise<void> {
     // Просто эмуляция успешного обновления
+    return Promise.resolve();
+  }
+
+  async sendEventCreateMark(mark: IOffchainMark, e?: Error): Promise<void> {
     return Promise.resolve();
   }
 }
@@ -155,7 +160,7 @@ describe("BaseMarkService", () => {
 
     // Чтобы не мешать, заглушим findOne и create
     jest.spyOn(service, "findOnePublic").mockResolvedValue(null);
-    jest.spyOn(service, "create").mockResolvedValue();
+    jest.spyOn(service, "create").mockResolvedValue(mockMark);
 
     const result = await service.processMark(mockMark);
 

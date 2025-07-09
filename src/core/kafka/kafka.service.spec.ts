@@ -113,18 +113,16 @@ describe("KafkaService", () => {
   describe("sendMarkCreated", () => {
     it("should send mark created message to Kafka", async () => {
       const message: MarkRequest = {
-        id: "123",
-        createdAt: { seconds: Date.now(), nanos: 0 },
         metadata: {
           eventId: "123",
           schemaVersion: "1",
-          eventTime: { milliseconds: Date.now()},
+          eventTime: { milliseconds: Date.now() },
         },
-        fromParticipantId: '1',
-        toParticipantId: '2',
+        fromParticipantId: "1",
+        toParticipantId: "2",
         offchainMarkType: OffchainMarkType.OFFCHAIN_MARK_TYPE_BUSINESS_FEEDBACK,
         value: true,
-        isOnchain: false
+        isOnchain: false,
       };
       const sendSpy = jest.spyOn(service, "send").mockResolvedValue({ status: "ok" });
 

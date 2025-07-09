@@ -1,10 +1,10 @@
 import { Global, Module } from "@nestjs/common";
-import { Neo4jModule } from "src/core/neo4j/neo4j.module";
 import { OnchainService } from "./onchain.service";
+import { KafkaModule } from "src/core/kafka/kafka.module";
 
 @Global()
 @Module({
-  imports: [Neo4jModule],
+  imports: [KafkaModule],
   providers: [OnchainService],
   exports: [OnchainService],
 })

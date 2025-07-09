@@ -8,11 +8,10 @@ export class AppController {
   @Get("/create-mark")
   createMark() {
     this.offchainService.process({
-      fromParticipantId: "1",
-      toParticipantId: "2",
+      fromParticipantId: "2",
+      toParticipantId: "7",
       markType: OffchainMarkType.RELATION,
       value: false,
-      createdAt: new Date(),
     });
   }
 }

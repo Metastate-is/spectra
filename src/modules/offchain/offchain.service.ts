@@ -3,12 +3,17 @@ import { TransactionPromise } from "neo4j-driver-core";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
 import { BaseMarkService } from "src/core/mark/base-makrs.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { KafkaService } from "src/core/kafka/kafka.service";
+import { formatEventPayload } from "src/utils/kafka/format-event-created";
 
 @Injectable()
 export class OffchainService extends BaseMarkService<IOffchainMark> {
   protected readonly onchain = false;
 
-  constructor(neo4jService: Neo4jService) {
+  constructor(
+    neo4jService: Neo4jService,
+    private readonly kafkaService: KafkaService,
+  ) {
     super(neo4jService, OffchainService.name);
   }
 
@@ -20,7 +25,7 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
    * Создание новой оффчейн-марк
    * @param markData
    */
-  protected async create(markData: IOffchainMark, tx: TransactionPromise): Promise<void> {
+  protected async create(markData: IOffchainMark, tx: TransactionPromise): Promise<IOffchainMark> {
     try {
       const queryParams = {
         fromParticipantId: markData.fromParticipantId,
@@ -40,11 +45,26 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         })
         CREATE (from)-[:GAVE]->(mark)-[:ABOUT]->(to)
         CREATE (mark)-[:OF_TYPE]->(type)
+        RETURN mark
       `;
 
-      await tx.run(query, queryParams);
+      const result = await tx.run(query, queryParams);
+
+      const record = result.records[0];
+      if (!record || !record.has("mark")) {
+        this.logger.error("MARK not created or missing in response ");
+        throw new Error("Mark not created or missing in response");
+      }
+
+      const mark = record.get("mark").properties;
+
+      return {
+        ...mark,
+        ...queryParams,
+      };
     } catch (e) {
       this.logger.error("Error creating new mark", e);
+      console.error(e);
       throw e;
     }
   }
@@ -67,12 +87,27 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
         SET mark.value = $value,
             mark.updatedAt = datetime()
+        RETURN mark
       `;
 
       await tx.run(query, queryParams);
     } catch (e) {
       this.logger.error("Error updating existing mark", e);
       throw e;
+    }
+  }
+
+  protected async sendEventCreateMark(mark: IOffchainMark, e?: Error): Promise<void> {
+    try {
+      const payload = formatEventPayload(mark, mark.markType, this.onchain, e);
+
+      await this.kafkaService.sendMarkCreated(payload);
+
+      this.logger.log(`Mark created message sent successfully`, {
+        meta: { payload },
+      });
+    } catch (e) {
+      this.logger.error("Error sending event", e);
     }
   }
 }

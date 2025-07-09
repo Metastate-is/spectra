@@ -3,18 +3,23 @@ import { IOffchainMark } from "src/core/iterface/offchain.interface";
 import { OffchainMarkType } from "src/type";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { OffchainService } from "./offchain.service";
+import { KafkaService } from "src/core/kafka/kafka.service";
 
 describe("OffchainService", () => {
   let service: OffchainService;
   let neo4jService: Neo4jService;
+  let kafkaService: KafkaService;
   let module: TestingModule;
 
   const mockMark: IOffchainMark = {
-    fromParticipantId: "1",
-    toParticipantId: "2",
+    fromParticipantId: "11",
+    toParticipantId: "21",
     markType: OffchainMarkType.RELATION,
     value: true,
-    createdAt: new Date(),
+  };
+
+  const mockKafkaService = {
+    sendMarkCreated: jest.fn(),
   };
 
   const mockTx = {
@@ -34,11 +39,16 @@ describe("OffchainService", () => {
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      providers: [OffchainService, { provide: Neo4jService, useValue: mockNeo4jService }],
+      providers: [
+        OffchainService,
+        { provide: Neo4jService, useValue: mockNeo4jService },
+        { provide: KafkaService, useValue: mockKafkaService },
+      ],
     }).compile();
 
     service = module.get<OffchainService>(OffchainService);
     neo4jService = module.get(Neo4jService);
+    kafkaService = module.get(KafkaService);
 
     jest.clearAllMocks();
   });
@@ -53,7 +63,21 @@ describe("OffchainService", () => {
         .mockResolvedValueOnce({}) // fromParticipant MERGE
         .mockResolvedValueOnce({}) // toParticipant MERGE
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
-        .mockResolvedValueOnce({}); // create mark
+        .mockResolvedValueOnce({
+          records: [
+            {
+              get: (key: string) => ({
+                properties: {
+                  id: "some-uuid",
+                  value: true,
+                  createdAt: "2025-07-09T09:00:00Z",
+                  updatedAt: "2025-07-09T09:00:00Z",
+                },
+              }),
+              has: (key: string) => key === "mark",
+            },
+          ],
+        }); // create mark
 
       const result = await service.process(mockMark);
 

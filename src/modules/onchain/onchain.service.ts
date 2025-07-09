@@ -3,12 +3,17 @@ import { TransactionPromise } from "neo4j-driver-core";
 import { BaseMarkService } from "src/core/mark/base-makrs.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
+import { KafkaService } from "src/core/kafka/kafka.service";
+import { formatEventPayload } from "src/utils/kafka/format-event-created";
 
 @Injectable()
 export class OnchainService extends BaseMarkService<IOnchainMark> {
   protected readonly onchain = true;
 
-  constructor(neo4jService: Neo4jService) {
+  constructor(
+    neo4jService: Neo4jService,
+    private readonly kafkaService: KafkaService,
+  ) {
     super(neo4jService, OnchainService.name);
   }
 
@@ -20,7 +25,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
    * Создание новой оффчейн-марк
    * @param markData
    */
-  protected async create(markData: IOnchainMark, tx: TransactionPromise): Promise<void> {
+  protected async create(markData: IOnchainMark, tx: TransactionPromise): Promise<IOnchainMark> {
     try {
       const queryParams = {
         fromParticipantId: markData.fromParticipantId,
@@ -40,9 +45,21 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         })
         CREATE (from)-[:GAVE]->(mark)-[:ABOUT]->(to)
         CREATE (mark)-[:OF_TYPE]->(type)
+        RETURN mark
       `;
 
-      await tx.run(query, queryParams);
+      const result = await tx.run(query, queryParams);
+
+      const record = result.records[0];
+      if (!record || !record.has("mark")) {
+        throw new Error("Mark not created or missing in response");
+      }
+
+      const mark = record.get("mark").properties;
+      return {
+        ...mark,
+        ...queryParams,
+      };
     } catch (e) {
       this.logger.error("Error creating new mark", e);
       throw e;
@@ -67,12 +84,27 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
         SET mark.value = $value,
             mark.updatedAt = datetime()
+        RETURN mark
       `;
 
       await tx.run(query, queryParams);
     } catch (e) {
       this.logger.error("Error updating existing mark", e);
       throw e;
+    }
+  }
+
+  protected async sendEventCreateMark(mark: IOnchainMark, e?: Error): Promise<void> {
+    try {
+      const payload = formatEventPayload(mark, mark.markType, this.onchain, e);
+
+      await this.kafkaService.sendMarkCreated(payload);
+
+      this.logger.log(`Mark created message sent successfully`, {
+        meta: { payload },
+      });
+    } catch (e) {
+      this.logger.error("Error sending event", e);
     }
   }
 }

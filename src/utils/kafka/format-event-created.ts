@@ -1,0 +1,53 @@
+import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
+import {
+  OffchainMarkType,
+  OffchainMarkTypeMap,
+  OnchainMarkType,
+  OnchainMarkTypeMap,
+} from "../../type";
+import KSUID_NODE from "ksuid";
+
+export const formatEventPayload = (
+  mark: any,
+  markType: OffchainMarkType | OnchainMarkType,
+  onchain: boolean,
+  e?: Error,
+): MarkCreated => {
+  const eventId = KSUID_NODE.randomSync().string;
+
+  let payload: MarkCreated = {
+    fromParticipantId: mark.fromParticipantId,
+    toParticipantId: mark.toParticipantId,
+    isOnchain: onchain,
+    value: mark.value,
+    metadata: {
+      eventId: eventId,
+      schemaVersion: "1.0.0",
+      eventTime: { milliseconds: Date.now() },
+    },
+  };
+
+  if (onchain) {
+    payload.onchainMarkType = OnchainMarkTypeMap[markType];
+  } else {
+    payload.offchainMarkType = OffchainMarkTypeMap[markType];
+  }
+
+  if (e) {
+    payload.error = {
+      message: e.message,
+      code: (e as any).code ?? "UNKNOWN",
+      details: JSON.stringify({
+        name: e.name,
+        stack: e.stack,
+      }),
+    };
+  } else {
+    if (mark.id && mark.createdAt) {
+      payload.id = mark.id;
+      payload.createdAt = { milliseconds: mark.createdAt.toStandardDate().getTime() };
+    }
+  }
+
+  return payload;
+};

@@ -133,32 +133,32 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-    /**
+  /**
    * Отправка сообщения о создании достижения
    * @param markCreatedMessage Сообщение о создании достижения
    * @returns Promise<RecordMetadata> Метаданные записи
    */
-    async sendMarkCreated(markCreatedMessage: MarkCreated): Promise<any> {
-      const topic = KAFKA_TOPICS.SPECTRA.MARK.CREATED;
-  
-      this.l.info("Sending mark created message to Kafka", {
-        meta: { topic, message: markCreatedMessage },
-      });
-  
-      try {
-        const result = await this.send(topic, markCreatedMessage);
-        if (result) {
-          this.l.info("Mark created message sent successfully", {
-            meta: { result },
-          });
-        } else {
-          this.l.info("[WARN] Mark created message was not sent to Kafka");
-        }
-        return result;
-      } catch (error) {
-        this.l.error("Failed to send mark created message", error as Error);
-        // Не пробрасываем ошибку дальше, чтобы не блокировать работу приложения
-        return null;
+  async sendMarkCreated(markCreatedMessage: MarkCreated): Promise<any> {
+    const topic = KAFKA_TOPICS.SPECTRA.MARK.CREATED;
+
+    this.l.info("Sending mark created message to Kafka", {
+      meta: { topic, message: markCreatedMessage },
+    });
+
+    try {
+      const result = await this.send(topic, markCreatedMessage);
+      if (result) {
+        this.l.info("Mark created message sent successfully", {
+          meta: { result },
+        });
+      } else {
+        this.l.info("[WARN] Mark created message was not sent to Kafka");
       }
+      return result;
+    } catch (error) {
+      this.l.error("Failed to send mark created message", error as Error);
+      // Не пробрасываем ошибку дальше, чтобы не блокировать работу приложения
+      return null;
     }
+  }
 }

@@ -3,10 +3,14 @@ import { OnchainService } from "./onchain.service";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { OnchainMarkType } from "src/type";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { KafkaService } from "src/core/kafka/kafka.service";
+import { DateTime } from "neo4j-driver";
+import neo4j from "neo4j-driver";
 
 describe("OnchainService", () => {
   let service: OnchainService;
   let neo4jService: Neo4jService;
+  let kafkaService: KafkaService;
   let module: TestingModule;
 
   const mockMark: IOnchainMark = {
@@ -15,8 +19,26 @@ describe("OnchainService", () => {
     markType: OnchainMarkType.TRUST,
     value: true,
     txHash: "1",
-    confirmedAt: new Date(),
-    createdAt: new Date(),
+    confirmedAt: new DateTime(
+      neo4j.int(2025),
+      neo4j.int(7),
+      neo4j.int(9),
+      neo4j.int(9),
+      neo4j.int(0),
+      neo4j.int(0),
+      neo4j.int(0),
+      neo4j.int(0),
+    ),
+    createdAt: new DateTime(
+      neo4j.int(2025),
+      neo4j.int(7),
+      neo4j.int(9),
+      neo4j.int(9),
+      neo4j.int(0),
+      neo4j.int(0),
+      neo4j.int(0),
+      neo4j.int(0),
+    ),
   };
 
   const mockTx = {
@@ -24,6 +46,10 @@ describe("OnchainService", () => {
     commit: jest.fn(),
     rollback: jest.fn(),
   } as any;
+
+  const mockKafkaService = {
+    sendMarkCreated: jest.fn(),
+  };
 
   const mockSession = {
     beginTransaction: jest.fn().mockReturnValue(mockTx),
@@ -36,10 +62,15 @@ describe("OnchainService", () => {
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      providers: [OnchainService, { provide: Neo4jService, useValue: mockNeo4jService }],
+      providers: [
+        OnchainService,
+        { provide: Neo4jService, useValue: mockNeo4jService },
+        { provide: KafkaService, useValue: mockKafkaService },
+      ],
     }).compile();
 
     service = module.get<OnchainService>(OnchainService);
+    kafkaService = module.get(KafkaService);
     neo4jService = module.get(Neo4jService);
 
     jest.clearAllMocks();
@@ -55,7 +86,21 @@ describe("OnchainService", () => {
         .mockResolvedValueOnce({}) // fromParticipant MERGE
         .mockResolvedValueOnce({}) // toParticipant MERGE
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
-        .mockResolvedValueOnce({}); // create mark
+        .mockResolvedValueOnce({
+          records: [
+            {
+              get: (key: string) => ({
+                properties: {
+                  id: "some-uuid",
+                  value: true,
+                  createdAt: "2025-07-09T09:00:00Z",
+                  updatedAt: "2025-07-09T09:00:00Z",
+                },
+              }),
+              has: (key: string) => key === "mark",
+            },
+          ],
+        }); // create mark
 
       const result = await service.process(mockMark);
 

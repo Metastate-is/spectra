@@ -2,7 +2,6 @@ import { Neo4jService } from "../neo4j/neo4j.service";
 import { StructuredLoggerService } from "../logger";
 import { TransactionPromise } from "neo4j-driver-core";
 import { IBaseMark } from "../iterface/base.interface";
-
 /**
  * Модель данных в Neo4j
  *
@@ -55,8 +54,9 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
   protected abstract readonly onchain: boolean;
   protected readonly logger = new StructuredLoggerService();
 
-  protected abstract create(mark: TMark, tx: TransactionPromise): Promise<void>;
+  protected abstract create(mark: TMark, tx: TransactionPromise): Promise<TMark>;
   protected abstract update(mark: TMark, tx: TransactionPromise): Promise<void>;
+  protected abstract sendEventCreateMark(mark: TMark, e?: Error): Promise<void>;
 
   constructor(
     protected readonly neo4jService: Neo4jService,
@@ -73,28 +73,34 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     const session = this.neo4jService.initSession();
     const tx = session.beginTransaction();
 
-    const queryParams = {
-      ...mark,
-      tx,
-    };
+    let upsertedMark: TMark | null = null;
+    let isExisting: boolean = false;
 
     try {
       await this.createParticipantIfNotExists(mark.fromParticipantId, tx);
       await this.createParticipantIfNotExists(mark.toParticipantId, tx);
 
       const existing = await this.findOne(mark, tx);
-
       if (existing) {
-        await this.update(queryParams, tx);
+        isExisting = true;
+        await this.update(mark, tx);
+        await tx.commit();
       } else {
-        await this.create(queryParams, tx);
+        upsertedMark = await this.create(mark, tx);
+        await tx.commit();
+        await this.sendEventCreateMark(upsertedMark);
       }
 
-      await tx.commit();
       return true;
     } catch (e) {
       this.logger.error("Error creating/updating mark", e);
       await tx.rollback();
+
+      // Отправляем событие что создать связь не удалось
+      if (!isExisting) {
+        await this.sendEventCreateMark(mark, e);
+      }
+
       return false;
     } finally {
       await session.close();
