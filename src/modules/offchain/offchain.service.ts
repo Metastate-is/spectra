@@ -64,7 +64,6 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
       };
     } catch (e) {
       this.logger.error("Error creating new mark", e);
-      console.error(e);
       throw e;
     }
   }
