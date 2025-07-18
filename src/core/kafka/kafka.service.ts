@@ -2,7 +2,6 @@ import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import { StructuredLoggerService } from "../logger";
-import { AchievementCreated } from "@metastate-is/proto-models/generated/metastate/kafka/quest/v1/achievement_created";
 import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 
 /**

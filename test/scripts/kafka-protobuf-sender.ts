@@ -2,17 +2,20 @@
 
 import { Kafka, logLevel } from "kafkajs";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
-import { Timestamp } from "@metastate-is/proto-models/generated/google/protobuf/timestamp";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
 
-const timestamp: Timestamp = {
-  seconds: Date.now() / 1000,
-  nanos: 0,
-};
+/**
+ * Script for sending messages to Kafka topics related to relations
+ *
+ * Usage:
+ * ts-node kafka-protobuf-sender.ts [request]
+ *
+ * Parameters:
+ * - request: send to spectra.mark.request.v1 (default)
+ */
+
 const samplePayload: MarkRequest = {
-  id: "test-mark-123",
-  createdAt: timestamp,
   fromParticipantId: "test-participant-123",
   toParticipantId: "test-participant-456",
   isOnchain: false,
@@ -44,7 +47,6 @@ async function produceMessage() {
     topic: topicName,
     messages: [
       {
-        key: samplePayload.id,
         value: Buffer.from(message),
       },
     ],

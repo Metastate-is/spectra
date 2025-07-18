@@ -23,6 +23,11 @@ export class MarkHandler {
     // Инициализируем трассировку для этого запроса
     // traceId нужен только для инициализации, но не для логов (будет добавлен через mixin)
     this.logger.startTrace();
+    this.logger.log(`Processing mark request event for mark`, {
+      meta: {
+        data,
+      },
+    });
 
     try {
       // Получаем дату и записываем ее в Кэш

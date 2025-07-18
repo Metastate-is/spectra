@@ -26,6 +26,11 @@ async function bootstrap(): Promise<void> {
     const configService = await app.resolve(ConfigService);
     const port = configService.get<number>("PORT", 3004);
 
+    const kafkaOptions = configService.get("kafka").getClientOptions();
+    app.connectMicroservice(kafkaOptions);
+
+    await app.startAllMicroservices();
+
     await app.listen(port);
 
     l.info(`Application is running on: http://localhost:${port}`, {

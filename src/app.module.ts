@@ -15,6 +15,7 @@ import { OnchainModule } from "./modules/onchain/onchain.module";
 import { OffchainModule } from "./modules/offchain/offchain.module";
 import { AppController } from "./app.controller";
 import { EventsModule } from "./modules/events/events.module";
+import { KafkaModule } from "./core/kafka/kafka.module";
 
 if (process.env.NODE_ENV === "test") {
   // Динамический импорт только в тестовой среде
@@ -51,7 +52,7 @@ const imports = [
     inject: [ConfigService],
     isGlobal: true,
   }),
-  // KafkaModule,
+  KafkaModule,
   RedisModule,
   Neo4jModule.forRootAsync(),
   OnchainModule,

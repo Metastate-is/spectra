@@ -9,5 +9,6 @@ import { OffchainModule } from "../offchain/offchain.module";
 @Module({
   imports: [KafkaModule, RedisModule, OnchainModule, OffchainModule],
   providers: [MarkHandler, EventsCache],
+  exports: [MarkHandler, EventsCache],
 })
 export class EventsModule {}
