@@ -16,16 +16,16 @@ import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate
  */
 
 const samplePayload: MarkRequest = {
-  fromParticipantId: "test-participant-123",
-  toParticipantId: "test-participant-456",
+  fromParticipantId: "user123",
+  toParticipantId: "test-participant-123",
   isOnchain: false,
   offchainMarkType: OffchainMarkType.OFFCHAIN_MARK_TYPE_BUSINESS_FEEDBACK,
-  value: true,
+  value: false,
   metadata: {
     eventId: "test-event-123",
     schemaVersion: "1.0.0",
     eventTime: { milliseconds: Date.now() },
-  },
+  }
 };
 
 async function produceMessage() {
@@ -40,14 +40,11 @@ async function produceMessage() {
 
   const topicName = KAFKA_TOPICS.SPECTRA.MARK.REQUEST;
 
-  // Create the protobuf message
-  const message = MarkRequest.encode(samplePayload).finish();
-
   await producer.send({
     topic: topicName,
     messages: [
       {
-        value: Buffer.from(message),
+        value: Buffer.from(JSON.stringify(samplePayload)),
       },
     ],
   });

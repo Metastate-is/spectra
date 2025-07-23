@@ -67,7 +67,6 @@ const imports = [
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
-        transform: true,
         whitelist: true,
         forbidNonWhitelisted: false,
       }),

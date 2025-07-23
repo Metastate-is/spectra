@@ -6,7 +6,10 @@ import { StructuredLoggerService } from "src/core/logger";
 import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
+import { Controller } from "@nestjs/common";
+import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
 
+@Controller()
 export class MarkHandler {
   private readonly logger = new StructuredLoggerService();
 
@@ -20,10 +23,11 @@ export class MarkHandler {
 
   @MessagePattern(KAFKA_TOPICS.SPECTRA.MARK.REQUEST)
   async handleMarkRequestEvent(data: MarkRequest) {
+    console.log("handleMarkRequestEvent", data);
     // Инициализируем трассировку для этого запроса
     // traceId нужен только для инициализации, но не для логов (будет добавлен через mixin)
     this.logger.startTrace();
-    this.logger.log(`Processing mark request event for mark`, {
+    this.logger.log(`Handle mark request event`, {
       meta: {
         data,
       },
@@ -37,7 +41,7 @@ export class MarkHandler {
         if (exist) return;
       }
 
-      this.logger.log(`Processing mark request event for mark`, {
+      this.logger.log(`Processing mark request event`, {
         meta: {
           data,
         },
@@ -72,15 +76,28 @@ export class MarkHandler {
 
   async processMark(data: MarkRequest): Promise<boolean | void> {
     try {
+
+      this.logger.log(`Processing mark event`, {
+        meta: {
+          data,
+        },
+      });
+
       if (data.isOnchain) {
-        if (!isValidOnchainMarkType(data.onchainMarkType)) {
+        if (data.onchainMarkType && !isValidOnchainMarkType(data.onchainMarkType)) {
           return this.logMarkTypeError("onchain", data);
         }
+
+        this.logger.log(`Processing onchain mark event`, {
+          meta: {
+            data,
+          },
+        });
 
         const result = await this.onchainService.process({
           fromParticipantId: data.fromParticipantId,
           toParticipantId: data.toParticipantId,
-          markType: data.onchainMarkType,
+          markType: OnchainMarkTypeMap[data.onchainMarkType as keyof typeof OnchainMarkTypeMap]!,
           value: data.value,
         });
 
@@ -88,14 +105,21 @@ export class MarkHandler {
           this.logger.debug("Error processing onchain mark", { meta: { data } });
         }
       } else {
-        if (!isValidOffchainMarkType(data.offchainMarkType)) {
+
+        if (data.offchainMarkType && !isValidOffchainMarkType(data.offchainMarkType)) {
           return this.logMarkTypeError("offchain", data);
         }
+
+        this.logger.log(`Processing offchain mark event`, {
+          meta: {
+            data,
+          },
+        });
 
         const result = await this.offchainService.process({
           fromParticipantId: data.fromParticipantId,
           toParticipantId: data.toParticipantId,
-          markType: data.offchainMarkType,
+          markType: OffchainMarkTypeMap[data.offchainMarkType as keyof typeof OffchainMarkTypeMap]!,
           value: data.value,
         });
 

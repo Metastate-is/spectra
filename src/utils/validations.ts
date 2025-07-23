@@ -1,9 +1,9 @@
 import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
 
-export const isValidOnchainMarkType = (key: unknown): key is keyof typeof OnchainMarkTypeMap => {
-  return typeof key === "string" && key in OnchainMarkTypeMap;
+export const isValidOnchainMarkType = (index: number): index is keyof typeof OnchainMarkTypeMap => {
+  return typeof index === "number" && OnchainMarkTypeMap[index] !== null;
 };
 
-export const isValidOffchainMarkType = (key: unknown): key is keyof typeof OffchainMarkTypeMap => {
-  return typeof key === "string" && key in OffchainMarkTypeMap;
+export const isValidOffchainMarkType = (index: number): index is keyof typeof OffchainMarkTypeMap => {
+  return typeof index === "number" && OffchainMarkTypeMap[index] !== null;
 };

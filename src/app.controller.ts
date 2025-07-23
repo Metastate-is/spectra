@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, UsePipes, ValidationPipe } from "@nestjs/common";
 import { OffchainService } from "./modules/offchain/offchain.service";
 import { OffchainMarkType } from "./type";
 import { StructuredLoggerService } from "./core/logger";
@@ -9,13 +9,13 @@ export class AppController {
     this.logger.setContext(AppController.name);
   }
 
-  @Get("/create-mark")
-  createMark() {
-    this.offchainService.process({
-      fromParticipantId: "2",
-      toParticipantId: "7",
-      markType: OffchainMarkType.RELATION,
-      value: false,
+  @Get("/get-mark")
+  @UsePipes(new ValidationPipe({ transform: true }))
+  getMark() {
+    return this.offchainService.getReputationContext({
+      fromParticipantId: "user123",
+      toParticipantId: "user456",
+      markType: OffchainMarkType.BUSINESS_FEEDBACK,
     });
   }
 }

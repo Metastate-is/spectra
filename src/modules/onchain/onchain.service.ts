@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { TransactionPromise } from "neo4j-driver-core";
-import { BaseMarkService } from "src/core/mark/base-makrs.service";
+import { BaseMarkService, IGetReputationContextResponse } from "src/core/mark/base-makrs.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
@@ -34,6 +34,12 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         value: markData.value,
       };
 
+      this.logger.log("OnchainService create", {
+        meta: {
+          queryParams,
+        },
+      });
+
       const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId}), (to:Participant {participantId: $toParticipantId})
         MERGE (type:MarkType {name: $markType, onchain: ${this.onchain}})
@@ -56,6 +62,13 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
       }
 
       const mark = record.get("mark").properties;
+
+      this.logger.log("OnchainService create result", {
+        meta: {
+          mark,
+        },
+      });
+
       return {
         ...mark,
         ...queryParams,
@@ -79,6 +92,12 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         value: markData.value,
       };
 
+      this.logger.log("OnchainService update", {
+        meta: {
+          queryParams,
+        },
+      });
+
       const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
@@ -88,6 +107,12 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
       `;
 
       await tx.run(query, queryParams);
+
+      this.logger.log("OnchainService update result", {
+        meta: {
+          queryParams,
+        },
+      });
     } catch (e) {
       this.logger.error("Error updating existing mark", e);
       throw e;
@@ -106,5 +131,9 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     } catch (e) {
       this.logger.error("Error sending event", e);
     }
+  }
+
+  async getReputationContext(mark: Omit<IOnchainMark, "value">): Promise<IGetReputationContextResponse> {
+    return await super.getReputationContext(mark as IOnchainMark);
   }
 }

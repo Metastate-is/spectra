@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { TransactionPromise } from "neo4j-driver-core";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
-import { BaseMarkService } from "src/core/mark/base-makrs.service";
+import { BaseMarkService, IGetReputationContextResponse } from "src/core/mark/base-makrs.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { KafkaService } from "src/core/kafka/kafka.service";
 import { formatEventPayload } from "src/utils/kafka/format-event-created";
+
 
 @Injectable()
 export class OffchainService extends BaseMarkService<IOffchainMark> {
@@ -18,6 +19,12 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
   }
 
   async process(mark: IOffchainMark): Promise<boolean> {
+    console.log("OffchainService process", mark);
+    this.logger.log("OffchainService process", {
+      meta: {
+        mark,
+      },
+    });
     return await super.process(mark);
   }
 
@@ -33,6 +40,12 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         markType: markData.markType,
         value: markData.value,
       };
+
+      this.logger.log("OffchainService create", {
+        meta: {
+          queryParams,
+        },
+      });
 
       const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId}), (to:Participant {participantId: $toParticipantId})
@@ -58,6 +71,12 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
 
       const mark = record.get("mark").properties;
 
+      this.logger.log("OffchainService create result", {
+        meta: {
+          mark,
+        },
+      });
+
       return {
         ...mark,
         ...queryParams,
@@ -81,6 +100,12 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
         value: markData.value,
       };
 
+      this.logger.log("OffchainService update", {
+        meta: {
+          queryParams,
+        },
+      });
+
       const query = /*cypher*/ `
         MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
@@ -90,6 +115,12 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
       `;
 
       await tx.run(query, queryParams);
+
+      this.logger.log("OffchainService update result", {
+        meta: {
+          queryParams,
+        },
+      });
     } catch (e) {
       this.logger.error("Error updating existing mark", e);
       throw e;
@@ -108,5 +139,9 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
     } catch (e) {
       this.logger.error("Error sending event", e);
     }
+  }
+
+  async getReputationContext(mark: Omit<IOffchainMark, "value">): Promise<IGetReputationContextResponse> {
+    return await super.getReputationContext(mark as IOffchainMark);
   }
 }

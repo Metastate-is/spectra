@@ -50,6 +50,25 @@ import { IBaseMark } from "../iterface/base.interface";
  *
  */
 
+export interface IGetMutualMarksResult {
+  fromTo?: boolean | null;
+  toToFrom?: boolean | null;
+}
+
+export interface IGetReputationContextResponse extends IGetMutualMarksResult {
+  commonParticipants: CommonParticipant[];
+}
+
+export interface CommonParticipant {
+  intermediateId: string;
+  intermediateToFrom?: boolean | null;
+  fromToIntermediate?: boolean | null;
+  intermediateToTo?: boolean | null;
+  toToIntermediate?: boolean | null;
+}
+
+
+
 export abstract class BaseMarkService<TMark extends IBaseMark> {
   protected abstract readonly onchain: boolean;
   protected readonly logger = new StructuredLoggerService();
@@ -138,4 +157,175 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     );
     return result.records.length ? result.records[0].get("mark").properties : null;
   }
+
+  /**
+    * Получает список общих участников (intermediate), которые имеют связь с двумя пользователями —
+    * userA и userB — через оценки типа "BusinessFeedback" (offchain).
+    *
+    * Для каждого найденного участника возвращаются значения направленных оценок:
+    * - как intermediate относится к userA (intermediate → userA)
+    * - как userA относится к intermediate (userA → intermediate)
+    * - как intermediate относится к userB (intermediate → userB)
+    * - как userB относится к intermediate (userB → intermediate)
+    *
+    * Условия:
+    * - intermediate не должен быть самим userA или userB.
+    * - оценки учитываются только с типом MarkType { name: "BusinessFeedback", onchain: false }.
+    * - связи между участниками и Mark'ами могут быть как GAVE, так и ABOUT.
+    *
+    * Возвращаемые поля:
+    * {
+    *   intermediateId: string;             // ID общего участника
+    *   intermediateToUserA: boolean | null;  // оценка intermediate → userA (если есть)
+    *   userAToIntermediate: boolean | null;  // оценка userA → intermediate (если есть)
+    *   intermediateToUserB: boolean | null;  // оценка intermediate → userB (если есть)
+    *   userBToIntermediate: boolean | null;  // оценка userB → intermediate (если есть)
+    * }
+    *
+    * Использование:
+    * - Применяется для анализа "социального графа доверия" между двумя пользователями.
+    * - Может использоваться для определения репутационного контекста или рекомендаций.
+  */
+  protected async findCommonParticipants(
+    mark: TMark,
+  ): Promise<CommonParticipant[]> {
+    const query = /* cypher */ `
+      MATCH (type:MarkType {name: $markType, onchain: $onchain})
+  
+      // Все участники, связанные с userA
+      MATCH (intermediate:Participant)
+      WHERE intermediate.participantId <> $userA AND intermediate.participantId <> $userB
+  
+      OPTIONAL MATCH (intermediate)-[:GAVE]->(m1:Mark)-[:ABOUT]->(a1:Participant {participantId: $userA})
+      WHERE (m1)-[:OF_TYPE]->(type)
+  
+      OPTIONAL MATCH (a2:Participant {participantId: $userA})-[:GAVE]->(m2:Mark)-[:ABOUT]->(intermediate)
+      WHERE (m2)-[:OF_TYPE]->(type)
+  
+      OPTIONAL MATCH (intermediate)-[:GAVE]->(m3:Mark)-[:ABOUT]->(b1:Participant {participantId: $userB})
+      WHERE (m3)-[:OF_TYPE]->(type)
+  
+      OPTIONAL MATCH (b2:Participant {participantId: $userB})-[:GAVE]->(m4:Mark)-[:ABOUT]->(intermediate)
+      WHERE (m4)-[:OF_TYPE]->(type)
+  
+      WITH intermediate,
+           m1.value AS intermediateToUserA,
+           m2.value AS userAToIntermediate,
+           m3.value AS intermediateToUserB,
+           m4.value AS userBToIntermediate
+  
+      WHERE (intermediateToUserA IS NOT NULL OR userAToIntermediate IS NOT NULL)
+        AND (intermediateToUserB IS NOT NULL OR userBToIntermediate IS NOT NULL)
+  
+      RETURN
+        intermediate.participantId AS intermediateId,
+        intermediateToUserA,
+        userAToIntermediate,
+        intermediateToUserB,
+        userBToIntermediate
+    `;
+  
+    try {
+      const result = await this.neo4jService.runQuery(query, { 
+        userA: mark.fromParticipantId,
+        userB: mark.toParticipantId,
+        onchain: this.onchain,
+        markType: mark.markType,
+       });
+
+      return result.records.map((r) => ({
+        intermediateId: r.get("intermediateId"),
+        intermediateToFrom: r.get("intermediateToUserA"),
+        fromToIntermediate: r.get("userAToIntermediate"),
+        intermediateToTo: r.get("intermediateToUserB"),
+        toToIntermediate: r.get("userBToIntermediate"),
+      }));
+    } catch (e) {
+      this.logger.error("Failed to find common BusinessFeedback participants", e);
+      return [];
+    }
+  }
+
+  /**
+ * Получает оценки типа "BusinessFeedback" (offchain) между двумя участниками:
+ * - от userA к userB
+ * - от userB к userA
+ *
+ * Условия:
+ * - учитываются только оценки с типом MarkType { name: "BusinessFeedback", onchain: false }
+ * - если оценка отсутствует — возвращается null
+ *
+ * Возвращаемые поля:
+ * {
+ *   userAToUserB: boolean | null;  // оценка userA → userB (если есть)
+ *   userBToUserA: boolean | null;  // оценка userB → userA (если есть)
+ * }
+ *
+ * Использование:
+ * - анализ направленных отношений между двумя участниками в социальном графе
+ * - получение контекста доверия или репутации между ними
+ */
+  protected async findMutualMarks(
+    mark: TMark,
+  ): Promise<IGetMutualMarksResult> {
+    const query = /* cypher */ `
+      MATCH (type:MarkType {name: $markType, onchain: $onchain})
+
+      OPTIONAL MATCH (fromA:Participant {participantId: $userA})-[:GAVE]->(markA:Mark)-[:ABOUT]->(toA:Participant {participantId: $userB}),
+      (markA)-[:OF_TYPE]->(type)
+
+      OPTIONAL MATCH (fromB:Participant {participantId: $userB})-[:GAVE]->(markB:Mark)-[:ABOUT]->(toB:Participant {participantId: $userA}),
+      (markB)-[:OF_TYPE]->(type)
+
+      RETURN
+        markA.value AS fromTo,
+        markB.value AS toToFrom
+    `;
+
+    try {
+      const result = await this.neo4jService.runQuery(query, {
+        userA: mark.fromParticipantId,
+        userB: mark.toParticipantId,
+        onchain: this.onchain,
+        markType: mark.markType,
+      });
+
+      if (result.records.length === 0) {
+        return { fromTo: null, toToFrom: null };
+      }
+
+      const record = result.records[0];
+      return {
+        fromTo: record.get("fromTo"),
+        toToFrom: record.get("toToFrom"),
+      };
+    } catch (e) {
+      this.logger.error("Failed to find mutual BusinessFeedback marks", e);
+      return { fromTo: null, toToFrom: null };
+    }
+  }
+
+  /**
+   * Получает контекст доверия между двумя участниками
+   * @param mark 
+   * @returns 
+   */
+  protected async getReputationContext(mark: TMark): Promise<IGetReputationContextResponse> {
+    try {
+      const mutualMarks = await this.findMutualMarks(mark);
+      const commonParticipants = await this.findCommonParticipants(mark);
+      return {
+        ...mutualMarks,
+        commonParticipants,
+      };
+    } catch (e) {
+      this.logger.error("Failed to get reputation context", e);
+      return {
+        fromTo: null,
+        toToFrom: null,
+        commonParticipants: [],
+      };
+    }
+  }
+
 }
