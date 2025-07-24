@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { TransactionPromise } from "neo4j-driver-core";
-import { BaseMarkService, IGetReputationContextResponse } from "src/core/mark/base-makrs.service";
-import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
+import { BaseMarkService, IGetReputationContextResponse } from "src/core/mark/base-marks.service";
+import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { cypher } from "src/utils/cypher";
 import { formatEventPayload } from "src/utils/kafka/format-event-created";
 
 @Injectable()
@@ -40,7 +41,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         },
       });
 
-      const query = /*cypher*/ `
+      const query = cypher /*cypher*/`
         MATCH (from:Participant {participantId: $fromParticipantId}), (to:Participant {participantId: $toParticipantId})
         MERGE (type:MarkType {name: $markType, onchain: ${this.onchain}})
         CREATE (mark:Mark {
@@ -98,7 +99,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         },
       });
 
-      const query = /*cypher*/ `
+      const query = cypher /*cypher*/`
         MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
               (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: ${this.onchain}})
         SET mark.value = $value,
@@ -125,7 +126,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
 
       await this.kafkaService.sendMarkCreated(payload);
 
-      this.logger.log(`Mark created message sent successfully`, {
+      this.logger.log("Mark created message sent successfully", {
         meta: { payload },
       });
     } catch (e) {
@@ -133,7 +134,9 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     }
   }
 
-  async getReputationContext(mark: Omit<IOnchainMark, "value">): Promise<IGetReputationContextResponse> {
+  async getReputationContext(
+    mark: Omit<IOnchainMark, "value">,
+  ): Promise<IGetReputationContextResponse> {
     return await super.getReputationContext(mark as IOnchainMark);
   }
 }

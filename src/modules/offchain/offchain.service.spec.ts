@@ -1,14 +1,12 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
-import { OffchainMarkType } from "src/type";
-import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { OffchainService } from "./offchain.service";
 import { KafkaService } from "src/core/kafka/kafka.service";
+import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { OffchainMarkType } from "src/type";
+import { OffchainService } from "./offchain.service";
 
 describe("OffchainService", () => {
   let service: OffchainService;
-  let neo4jService: Neo4jService;
-  let kafkaService: KafkaService;
   let module: TestingModule;
 
   const mockMark: IOffchainMark = {
@@ -47,8 +45,6 @@ describe("OffchainService", () => {
     }).compile();
 
     service = module.get<OffchainService>(OffchainService);
-    neo4jService = module.get(Neo4jService);
-    kafkaService = module.get(KafkaService);
 
     jest.clearAllMocks();
   });
@@ -66,7 +62,7 @@ describe("OffchainService", () => {
         .mockResolvedValueOnce({
           records: [
             {
-              get: (key: string) => ({
+              get: () => ({
                 properties: {
                   id: "some-uuid",
                   value: true,

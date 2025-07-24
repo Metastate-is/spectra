@@ -1,9 +1,8 @@
-import { OffchainMarkType } from "src/type";
-import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { BaseMarkService } from "./base-makrs.service";
 import { TransactionPromise } from "neo4j-driver-core";
+import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { OffchainMarkType } from "src/type";
 import { IOffchainMark } from "../iterface/offchain.interface";
-import { formatEventPayload } from "src/utils/kafka/format-event-created";
+import { BaseMarkService } from "./base-marks.service";
 
 class TestMarkService extends BaseMarkService<IOffchainMark> {
   protected readonly onchain = false;
@@ -26,17 +25,17 @@ class TestMarkService extends BaseMarkService<IOffchainMark> {
     return this.process(mark);
   }
 
-  async create(mark: IOffchainMark, tx: TransactionPromise): Promise<IOffchainMark> {
+  async create(mark: IOffchainMark): Promise<IOffchainMark> {
     // Просто эмуляция успешного создания
     return Promise.resolve(mark);
   }
 
-  async update(mark: IOffchainMark, tx: TransactionPromise): Promise<void> {
+  async update(): Promise<void> {
     // Просто эмуляция успешного обновления
     return Promise.resolve();
   }
 
-  async sendEventCreateMark(mark: IOffchainMark, e?: Error): Promise<void> {
+  async sendEventCreateMark(): Promise<void> {
     return Promise.resolve();
   }
 }
@@ -75,9 +74,6 @@ describe("BaseMarkService", () => {
     };
 
     service = new TestMarkService(mockNeo4jService as Neo4jService, "TestMarkService");
-
-    // Заглушка на логгер, чтобы не засорять консоль
-    service["logger"].error = jest.fn();
   });
 
   it("should create participant if not exists", async () => {

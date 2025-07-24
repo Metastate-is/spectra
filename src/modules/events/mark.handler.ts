@@ -1,13 +1,13 @@
-import { MessagePattern } from "@nestjs/microservices";
-import { EventsCache } from "./events-cache";
-import { OnchainService } from "../onchain/onchain.service";
-import { OffchainService } from "../offchain/offchain.service";
-import { StructuredLoggerService } from "src/core/logger";
-import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 import { Controller } from "@nestjs/common";
+import { MessagePattern } from "@nestjs/microservices";
+import { StructuredLoggerService } from "src/core/logger";
 import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
+import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
+import { OffchainService } from "../offchain/offchain.service";
+import { OnchainService } from "../onchain/onchain.service";
+import { EventsCache } from "./events-cache";
 
 @Controller()
 export class MarkHandler {
@@ -27,7 +27,7 @@ export class MarkHandler {
     // Инициализируем трассировку для этого запроса
     // traceId нужен только для инициализации, но не для логов (будет добавлен через mixin)
     this.logger.startTrace();
-    this.logger.log(`Handle mark request event`, {
+    this.logger.log("Handle mark request event", {
       meta: {
         data,
       },
@@ -41,7 +41,7 @@ export class MarkHandler {
         if (exist) return;
       }
 
-      this.logger.log(`Processing mark request event`, {
+      this.logger.log("Processing mark request event", {
         meta: {
           data,
         },
@@ -68,16 +68,15 @@ export class MarkHandler {
 
       await this.processMark(data);
     } catch (error) {
-      this.logger.error("Error processing mark request event", error);
+      this.logger.error("Error processing mark request event", error as Error);
     } finally {
       this.logger.endTrace();
     }
   }
 
-  async processMark(data: MarkRequest): Promise<boolean | void> {
+  async processMark(data: MarkRequest): Promise<boolean | undefined> {
     try {
-
-      this.logger.log(`Processing mark event`, {
+      this.logger.log("Processing mark event", {
         meta: {
           data,
         },
@@ -88,7 +87,7 @@ export class MarkHandler {
           return this.logMarkTypeError("onchain", data);
         }
 
-        this.logger.log(`Processing onchain mark event`, {
+        this.logger.log("Processing onchain mark event", {
           meta: {
             data,
           },
@@ -105,12 +104,11 @@ export class MarkHandler {
           this.logger.debug("Error processing onchain mark", { meta: { data } });
         }
       } else {
-
         if (data.offchainMarkType && !isValidOffchainMarkType(data.offchainMarkType)) {
           return this.logMarkTypeError("offchain", data);
         }
 
-        this.logger.log(`Processing offchain mark event`, {
+        this.logger.log("Processing offchain mark event", {
           meta: {
             data,
           },
@@ -128,11 +126,14 @@ export class MarkHandler {
         }
       }
     } catch (e) {
-      throw e;
+      this.logger.error("Error processing mark event", e as Error);
+      throw new Error(e);
     }
   }
 
-  private logMarkTypeError(type: "onchain" | "offchain", data: MarkRequest): void {
+  private logMarkTypeError(type: "onchain" | "offchain", data: MarkRequest): boolean {
     this.logger.warn(`Unknown ${type} mark type`, { meta: { data } });
+
+    return false;
   }
 }

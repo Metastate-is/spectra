@@ -2,20 +2,21 @@ import { CacheModule } from "@nestjs/cache-manager";
 import { Module, NestModule, ValidationPipe } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_PIPE } from "@nestjs/core";
+import { AppController } from "./app.controller";
+import { grpcListenerConfig } from "./config/grpc.config";
 import kafkaConfig from "./config/kafka.config";
 import loggerConfig from "./config/logger.config";
-import redisConfig from "./config/redis.config";
 import neo4jConfig from "./config/neo4j.config";
+import redisConfig from "./config/redis.config";
+import { KafkaModule } from "./core/kafka/kafka.module";
 import { LoggerModule } from "./core/logger";
+import { Neo4jModule } from "./core/neo4j/neo4j.module";
 import { RedisModule } from "./core/redis/redis.module";
 import { TelemetryModule } from "./core/telemetry/telemetry.module";
-import { Neo4jModule } from "./core/neo4j/neo4j.module";
-import { OnchainModule } from "./modules/onchain/onchain.module";
-import { OffchainModule } from "./modules/offchain/offchain.module";
-import { AppController } from "./app.controller";
 import { EventsModule } from "./modules/events/events.module";
-import { KafkaModule } from "./core/kafka/kafka.module";
-import { grpcListenerConfig } from "./config/grpc.config";
+import { HealthModule } from "./modules/health/health.module";
+import { OffchainModule } from "./modules/offchain/offchain.module";
+import { OnchainModule } from "./modules/onchain/onchain.module";
 import { ReputationModule } from "./modules/reputation/reputation.module";
 
 if (process.env.NODE_ENV === "test") {
@@ -26,13 +27,7 @@ if (process.env.NODE_ENV === "test") {
 
 const imports = [
   ConfigModule.forRoot({
-    load: [
-      redisConfig,
-      kafkaConfig,
-      loggerConfig,
-      neo4jConfig,
-      grpcListenerConfig
-    ],
+    load: [redisConfig, kafkaConfig, loggerConfig, neo4jConfig, grpcListenerConfig],
     isGlobal: true,
   }),
   // Добавляем модуль логирования
@@ -59,6 +54,7 @@ const imports = [
   OnchainModule,
   OffchainModule,
   EventsModule,
+  HealthModule,
 ];
 
 @Module({

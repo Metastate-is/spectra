@@ -1,9 +1,9 @@
 #!/usr/bin/env ts-node
 
-import { Kafka, logLevel } from "kafkajs";
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
+import { Kafka, logLevel } from "kafkajs";
 
 /**
  * Script for sending messages to Kafka topics related to relations
@@ -25,7 +25,7 @@ const samplePayload: MarkRequest = {
     eventId: "test-event-123",
     schemaVersion: "1.0.0",
     eventTime: { milliseconds: Date.now() },
-  }
+  },
 };
 
 async function produceMessage() {

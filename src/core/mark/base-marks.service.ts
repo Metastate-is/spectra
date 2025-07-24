@@ -1,7 +1,8 @@
-import { Neo4jService } from "../neo4j/neo4j.service";
-import { StructuredLoggerService } from "../logger";
 import { TransactionPromise } from "neo4j-driver-core";
+import { cypher } from "src/utils/cypher";
 import { IBaseMark } from "../iterface/base.interface";
+import { StructuredLoggerService } from "../logger";
+import { Neo4jService } from "../neo4j/neo4j.service";
 /**
  * Модель данных в Neo4j
  *
@@ -67,8 +68,6 @@ export interface CommonParticipant {
   toToIntermediate: boolean | null;
 }
 
-
-
 export abstract class BaseMarkService<TMark extends IBaseMark> {
   protected abstract readonly onchain: boolean;
   protected readonly logger = new StructuredLoggerService();
@@ -93,7 +92,7 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     const tx = session.beginTransaction();
 
     let upsertedMark: TMark | null = null;
-    let isExisting: boolean = false;
+    let isExisting = false;
 
     try {
       await this.createParticipantIfNotExists(mark.fromParticipantId, tx);
@@ -134,7 +133,8 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     participantId: string,
     tx: TransactionPromise,
   ): Promise<void> {
-    await tx.run(/*cypher*/ `MERGE (:Participant {participantId: $participantId})`, {
+    const query = cypher /*cypher*/`MERGE (:Participant {participantId: $participantId})`;
+    await tx.run(query, {
       participantId,
     });
   }
@@ -147,49 +147,46 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     mark: TMark,
     tx: TransactionPromise,
   ): Promise<Record<string, any> | null> {
-    const result = await tx.run(
-      /*cypher*/ `
-      MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
-            (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
-      RETURN mark
-      `,
-      { ...mark, onchain: this.onchain },
-    );
+    const query = cypher /*cypher*/`
+    MATCH (from:Participant {participantId: $fromParticipantId})-[:GAVE]->(mark:Mark)-[:ABOUT]->(to:Participant {participantId: $toParticipantId}),
+          (mark)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
+    RETURN mark
+    `;
+
+    const result = await tx.run(query, { ...mark, onchain: this.onchain });
     return result.records.length ? result.records[0].get("mark").properties : null;
   }
 
   /**
-    * Получает список общих участников (intermediate), которые имеют связь с двумя пользователями —
-    * userA и userB — через оценки типа "BusinessFeedback" (offchain).
-    *
-    * Для каждого найденного участника возвращаются значения направленных оценок:
-    * - как intermediate относится к userA (intermediate → userA)
-    * - как userA относится к intermediate (userA → intermediate)
-    * - как intermediate относится к userB (intermediate → userB)
-    * - как userB относится к intermediate (userB → intermediate)
-    *
-    * Условия:
-    * - intermediate не должен быть самим userA или userB.
-    * - оценки учитываются только с типом MarkType { name: "BusinessFeedback", onchain: false }.
-    * - связи между участниками и Mark'ами могут быть как GAVE, так и ABOUT.
-    *
-    * Возвращаемые поля:
-    * {
-    *   intermediateId: string;             // ID общего участника
-    *   intermediateToUserA: boolean | null;  // оценка intermediate → userA (если есть)
-    *   userAToIntermediate: boolean | null;  // оценка userA → intermediate (если есть)
-    *   intermediateToUserB: boolean | null;  // оценка intermediate → userB (если есть)
-    *   userBToIntermediate: boolean | null;  // оценка userB → intermediate (если есть)
-    * }
-    *
-    * Использование:
-    * - Применяется для анализа "социального графа доверия" между двумя пользователями.
-    * - Может использоваться для определения репутационного контекста или рекомендаций.
-  */
-  protected async findCommonParticipants(
-    mark: TMark,
-  ): Promise<CommonParticipant[]> {
-    const query = /* cypher */ `
+   * Получает список общих участников (intermediate), которые имеют связь с двумя пользователями —
+   * userA и userB — через оценки типа "BusinessFeedback" (offchain).
+   *
+   * Для каждого найденного участника возвращаются значения направленных оценок:
+   * - как intermediate относится к userA (intermediate → userA)
+   * - как userA относится к intermediate (userA → intermediate)
+   * - как intermediate относится к userB (intermediate → userB)
+   * - как userB относится к intermediate (userB → intermediate)
+   *
+   * Условия:
+   * - intermediate не должен быть самим userA или userB.
+   * - оценки учитываются только с типом MarkType { name: "BusinessFeedback", onchain: false }.
+   * - связи между участниками и Mark'ами могут быть как GAVE, так и ABOUT.
+   *
+   * Возвращаемые поля:
+   * {
+   *   intermediateId: string;             // ID общего участника
+   *   intermediateToUserA: boolean | null;  // оценка intermediate → userA (если есть)
+   *   userAToIntermediate: boolean | null;  // оценка userA → intermediate (если есть)
+   *   intermediateToUserB: boolean | null;  // оценка intermediate → userB (если есть)
+   *   userBToIntermediate: boolean | null;  // оценка userB → intermediate (если есть)
+   * }
+   *
+   * Использование:
+   * - Применяется для анализа "социального графа доверия" между двумя пользователями.
+   * - Может использоваться для определения репутационного контекста или рекомендаций.
+   */
+  protected async findCommonParticipants(mark: TMark): Promise<CommonParticipant[]> {
+    const query = cypher /* cypher */`
       MATCH (type:MarkType {name: $markType, onchain: $onchain})
   
       // Все участники, связанные с userA
@@ -224,14 +221,14 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
         intermediateToUserB,
         userBToIntermediate
     `;
-  
+
     try {
-      const result = await this.neo4jService.runQuery(query, { 
+      const result = await this.neo4jService.runQuery(query, {
         userA: mark.fromParticipantId,
         userB: mark.toParticipantId,
         onchain: this.onchain,
         markType: mark.markType,
-       });
+      });
 
       return result.records.map((r) => ({
         intermediateId: r.get("intermediateId"),
@@ -247,28 +244,26 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
   }
 
   /**
- * Получает оценки типа "BusinessFeedback" (offchain) между двумя участниками:
- * - от userA к userB
- * - от userB к userA
- *
- * Условия:
- * - учитываются только оценки с типом MarkType { name: "BusinessFeedback", onchain: false }
- * - если оценка отсутствует — возвращается null
- *
- * Возвращаемые поля:
- * {
- *   userAToUserB: boolean | null;  // оценка userA → userB (если есть)
- *   userBToUserA: boolean | null;  // оценка userB → userA (если есть)
- * }
- *
- * Использование:
- * - анализ направленных отношений между двумя участниками в социальном графе
- * - получение контекста доверия или репутации между ними
- */
-  protected async findMutualMarks(
-    mark: TMark,
-  ): Promise<IGetMutualMarksResult> {
-    const query = /* cypher */ `
+   * Получает оценки типа "BusinessFeedback" (offchain) между двумя участниками:
+   * - от userA к userB
+   * - от userB к userA
+   *
+   * Условия:
+   * - учитываются только оценки с типом MarkType { name: "BusinessFeedback", onchain: false }
+   * - если оценка отсутствует — возвращается null
+   *
+   * Возвращаемые поля:
+   * {
+   *   userAToUserB: boolean | null;  // оценка userA → userB (если есть)
+   *   userBToUserA: boolean | null;  // оценка userB → userA (если есть)
+   * }
+   *
+   * Использование:
+   * - анализ направленных отношений между двумя участниками в социальном графе
+   * - получение контекста доверия или репутации между ними
+   */
+  protected async findMutualMarks(mark: TMark): Promise<IGetMutualMarksResult> {
+    const query = cypher /* cypher */`
       MATCH (type:MarkType {name: $markType, onchain: $onchain})
 
       OPTIONAL MATCH (fromA:Participant {participantId: $userA})-[:GAVE]->(markA:Mark)-[:ABOUT]->(toA:Participant {participantId: $userB}),
@@ -307,8 +302,8 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
 
   /**
    * Получает контекст доверия между двумя участниками
-   * @param mark 
-   * @returns 
+   * @param mark
+   * @returns
    */
   protected async getReputationContext(mark: TMark): Promise<IGetReputationContextResponse> {
     try {
@@ -327,5 +322,4 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
       };
     }
   }
-
 }

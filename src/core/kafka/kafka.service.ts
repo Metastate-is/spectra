@@ -1,8 +1,8 @@
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
+import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import { StructuredLoggerService } from "../logger";
-import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 
 /**
  * Сервис для работы с Kafka

@@ -1,11 +1,11 @@
 import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
+import KSUID_NODE from "ksuid";
 import {
   OffchainMarkType,
   OffchainMarkTypeMap,
   OnchainMarkType,
   OnchainMarkTypeMap,
 } from "../../type";
-import KSUID_NODE from "ksuid";
 
 export const formatEventPayload = (
   mark: any,
@@ -15,7 +15,7 @@ export const formatEventPayload = (
 ): MarkCreated => {
   const eventId = KSUID_NODE.randomSync().string;
 
-  let payload: MarkCreated = {
+  const payload: MarkCreated = {
     fromParticipantId: mark.fromParticipantId,
     toParticipantId: mark.toParticipantId,
     isOnchain: onchain,

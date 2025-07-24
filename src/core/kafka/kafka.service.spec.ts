@@ -1,9 +1,9 @@
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
+import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
+import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
 import { ClientKafka } from "@nestjs/microservices";
 import { Test, TestingModule } from "@nestjs/testing";
 import { KafkaService } from "./kafka.service";
-import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
-import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 
 describe("KafkaService", () => {
   let service: KafkaService;

@@ -1,6 +1,5 @@
 import { registerAs } from "@nestjs/config";
 import { KafkaOptions, Transport } from "@nestjs/microservices";
-import { ProtobufDeserializer } from "src/utils/kafka/protobuf-deserializer";
 
 /**
  * Конфигурация Kafka для микросервисной архитектуры
@@ -18,7 +17,7 @@ export default registerAs("kafka", () => ({
 
   // Настройки клиента Kafka
   clientId: process.env.KAFKA_CLIENT_ID || "spectra",
-  brokers: ['localhost:9092'],
+  brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
   groupId: process.env.KAFKA_GROUP_ID || "spectra-group",
 
   // Настройки SSL (для продакшн)
@@ -48,7 +47,6 @@ export default registerAs("kafka", () => ({
         consumer: {
           groupId: this.groupId,
         },
-        // deserializer: new ProtobufDeserializer(),
       },
     };
   },

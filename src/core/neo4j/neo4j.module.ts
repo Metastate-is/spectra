@@ -19,14 +19,12 @@ export class Neo4jModule {
           inject: [ConfigService],
           useFactory: async (configService: ConfigService): Promise<Driver> => {
             try {
-              const host = configService.get<string>("neo4j.host");
-              const port = configService.get<number>("neo4j.port");
-              const scheme = configService.get<string>("neo4j.scheme");
+              const url = configService.get<string>("neo4j.url")!;
               const user = configService.get<string>("neo4j.user");
               const password = configService.get<string>("neo4j.password");
 
               const driver: Driver = neo4j.driver(
-                `${scheme}://${host}:${port}`,
+                url,
                 neo4j.auth.basic(user as string, password as string),
               );
 

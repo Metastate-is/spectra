@@ -68,6 +68,12 @@ configmap:
   name: values-bot
   data:
     PORT: 3000
+    GRPC_SERVER_PORT: 50060
+    KAFKA_BROKERS: metaapp-cluster-kafka-bootstrap.kafka.svc:9092
+    NEO4_URL: neo4j://my-neo4j-release.neo4j.svc.cluster.local:7687
+    NEO4J_PASSWORD: UGFE1WsBWmCpI3
+    NEO4J_USER: neo4j
+
 
 # Секция для секретов
 secrets:

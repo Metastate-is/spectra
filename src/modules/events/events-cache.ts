@@ -1,7 +1,7 @@
+import { Metadata } from "@metastate-is/proto-models/generated/metastate/common/v1/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cache } from "cache-manager";
-import { Metadata } from "@metastate-is/proto-models/generated/metastate/common/v1/common";
 
 @Injectable()
 export class EventsCache {

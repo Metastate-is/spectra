@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
-import { OffchainService } from "./offchain.service";
 import { KafkaModule } from "src/core/kafka/kafka.module";
+import { OffchainService } from "./offchain.service";
 
 @Global()
 @Module({

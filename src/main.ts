@@ -1,8 +1,8 @@
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { StructuredLoggerService } from "./core/logger";
 import { GRPC_LISTENER_CONFIG_KEY } from "./config/grpc.config";
+import { StructuredLoggerService } from "./core/logger";
 
 interface ExtendedError extends Error {
   cause?: unknown;
@@ -28,19 +28,19 @@ async function bootstrap(): Promise<void> {
     const port = configService.get<number>("PORT", 3004);
 
     const kafkaOptions = configService.get("kafka").getClientOptions({
-      createPartitioner: require('kafkajs').Partitioners.LegacyPartitioner
+      createPartitioner: require("kafkajs").Partitioners.LegacyPartitioner,
     });
-    
+
     const grpcOptions = configService.get(GRPC_LISTENER_CONFIG_KEY);
     if (!grpcOptions) {
-      throw new Error('gRPC listener config is missing');
+      throw new Error("gRPC listener config is missing");
     }
 
-    [grpcOptions, kafkaOptions].forEach(options => app.connectMicroservice(options));
+    [grpcOptions, kafkaOptions].forEach((options) => app.connectMicroservice(options));
 
     await app.startAllMicroservices();
-    l.info('All microservices started successfully');
-    l.info('gRPC packages loaded:', { meta: { packages: grpcOptions.options.package } });
+    l.info("All microservices started successfully");
+    l.info("gRPC packages loaded:", { meta: { packages: grpcOptions.options.package } });
 
     await app.listen(port);
 

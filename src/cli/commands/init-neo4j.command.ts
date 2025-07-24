@@ -1,7 +1,8 @@
 import { Command, CommandRunner } from "nest-commander";
-import { StructuredLoggerService } from "../../core/logger";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { OffchainMarkType, OnchainMarkType } from "src/type";
+import { cypher } from "src/utils/cypher";
+import { StructuredLoggerService } from "../../core/logger";
 
 @Command({
   name: "init-neo4j",
@@ -22,8 +23,10 @@ export class InitNeo4jCommand extends CommandRunner {
       await this.initializeMarkTypes();
       // Вешаем индексы
     } catch (error) {
+      this.l.error("[INIT ERROR] Ошибка инициализации", error as Error);
       process.exit(1);
     } finally {
+      this.l.endTrace();
     }
   }
 
@@ -39,7 +42,7 @@ export class InitNeo4jCommand extends CommandRunner {
 
       for (const type of types) {
         await tx.run(
-          /* cypher */ `
+          cypher /* cypher */`
           MERGE (:MarkType {name: $name, onchain: $onchain})
         `,
           type,

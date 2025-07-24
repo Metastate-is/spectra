@@ -21,7 +21,7 @@ export class Neo4jService implements OnApplicationShutdown {
     try {
       return await session.run(cypher, params);
     } catch (e) {
-      throw e;
+      throw new Error(e);
     } finally {
       await session.close();
     }

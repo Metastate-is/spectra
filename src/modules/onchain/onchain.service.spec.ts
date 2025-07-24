@@ -1,16 +1,14 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { OnchainService } from "./onchain.service";
-import { IOnchainMark } from "src/core/iterface/onchain.interface";
-import { OnchainMarkType } from "src/type";
-import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { KafkaService } from "src/core/kafka/kafka.service";
 import { DateTime } from "neo4j-driver";
 import neo4j from "neo4j-driver";
+import { IOnchainMark } from "src/core/iterface/onchain.interface";
+import { KafkaService } from "src/core/kafka/kafka.service";
+import { Neo4jService } from "src/core/neo4j/neo4j.service";
+import { OnchainMarkType } from "src/type";
+import { OnchainService } from "./onchain.service";
 
 describe("OnchainService", () => {
   let service: OnchainService;
-  let neo4jService: Neo4jService;
-  let kafkaService: KafkaService;
   let module: TestingModule;
 
   const mockMark: IOnchainMark = {
@@ -70,8 +68,6 @@ describe("OnchainService", () => {
     }).compile();
 
     service = module.get<OnchainService>(OnchainService);
-    kafkaService = module.get(KafkaService);
-    neo4jService = module.get(Neo4jService);
 
     jest.clearAllMocks();
   });
@@ -89,7 +85,7 @@ describe("OnchainService", () => {
         .mockResolvedValueOnce({
           records: [
             {
-              get: (key: string) => ({
+              get: () => ({
                 properties: {
                   id: "some-uuid",
                   value: true,

@@ -13,8 +13,6 @@ import type { OnModuleInit } from "@nestjs/common";
  */
 @Injectable()
 export class OpenTelemetryService implements OnModuleInit {
-  constructor() {}
-
   onModuleInit() {
     // This method will be used to initialize OpenTelemetry
     // For now, this is a placeholder for future implementation
