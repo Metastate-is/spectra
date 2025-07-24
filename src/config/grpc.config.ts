@@ -1,72 +1,71 @@
 import { join } from "path";
 import { registerAs } from "@nestjs/config";
-import { ClientProviderOptions, Transport } from "@nestjs/microservices";
+import { Transport } from "@nestjs/microservices";
+import * as fs from 'fs';
+import * as protoLoader from '@grpc/proto-loader';
+import { ReflectionService } from '@grpc/reflection';
 
-// Constants for the News gRPC service
-export const NEWS_PACKAGE_NAME = "metastate.grpc.bot.v1"; // Package name from channel_news.proto
-export const NEWS_SERVICE_NAME_FROM_PROTO = "NewsService"; // Service name from channel_news.proto
-export const NEWS_CLIENT_INJECTION_TOKEN = "NEWS_SERVICE_CLIENT"; // Custom injection token for the gRPC client
-export const NEWS_GRPC_CONFIG_KEY = "newsGrpc"; // Key for accessing this configuration via ConfigService
-
-export const GROUP_SUMMARY_CLIENT_INJECTION_TOKEN = "GROUP_SUMMARY_SERVICE_CLIENT";
-export const GROUP_SUMMARY_PACKAGE_NAME = "metastate.grpc.bot.v1";
-export const GROUP_SUMMARY_SERVICE_NAME_FROM_PROTO = "GroupSummaryService";
-export const GROUP_SUMMARY_GRPC_CONFIG_KEY = "groupSummaryGrpc";
+export const GRPC_LISTENER_CONFIG_KEY = 'grpcListener';
 
 /**
- * Configuration for the News gRPC client.
- * This will be registered with NestJS's ConfigModule.
+ * @TODO 
+ * Решить проблему с загрузкой импортов протофайлов
  */
-export const newsGrpcConfig = registerAs(
-  NEWS_GRPC_CONFIG_KEY,
-  (): ClientProviderOptions => ({
-    // 'name' is used as the injection token for the gRPC client.
-    // It can be a string or a symbol.
-    name: NEWS_CLIENT_INJECTION_TOKEN,
-    transport: Transport.GRPC,
-    options: {
-      // The URL of the gRPC service, loaded from environment variables.
-      url: process.env.GRPC_BOT_SERVICE_URL || "localhost:50051",
-      // The package name defined in the .proto file.
-      package: NEWS_PACKAGE_NAME,
-      // Path to the main .proto file, relative to one of the 'includeDirs'.
-      protoPath: join("metastate", "grpc", "bot", "v1", "channel_news.proto"),
-      loader: {
-        keepCase: false, // Converts snake_case to camelCase and vice versa
-        longs: String, // Converts long values to strings
-        enums: String, // Converts enum values to strings
-        defaults: true, // Sets default values for fields
-        oneofs: true, // Processes oneof fields
-        // Directories to search for imported .proto files.
-        // 'channel_news.proto' imports 'metastate/common/v1/common.proto'.
-        // This path should point to the root directory of 'metastate'.
-        includeDirs: [join(process.cwd(), "node_modules", "@metastate-is", "proto-models")],
-      },
-    },
-  }),
-);
+export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
+  const protoDir = join(process.cwd(), 'node_modules', '@metastate-is', 'proto-models');
 
-/**
- * Configuration for the Group Summary gRPC client.
- * This will be registered with NestJS's ConfigModule.
- */
-export const groupSummaryGrpcConfig = registerAs(
-  GROUP_SUMMARY_GRPC_CONFIG_KEY,
-  (): ClientProviderOptions => ({
-    name: GROUP_SUMMARY_CLIENT_INJECTION_TOKEN,
+  // const googleProtoDir = join(process.cwd(), 'node_modules', 'google-proto-files');
+
+  // Пути к файлам
+  // const markTypesProto = join(protoDir, 'metastate', 'kafka', 'spectra', 'v1', 'mark_types.proto');
+  const reputationProto = join(protoDir, 'metastate', 'grpc', 'spectra', 'v1', 'reputation_context.proto');
+  // const wrappersProto = join(googleProtoDir, 'google', 'protobuf', 'wrappers.proto');
+
+  // Проверка существования
+  [reputationProto].forEach(protoPath => {
+    console.log('gRPC Config: Proto path:', protoPath);
+    if (fs.existsSync(protoPath)) {
+      console.log('gRPC Config: ✅ File exists');
+    } else {
+      console.error('gRPC Config: ❌ File NOT FOUND');
+      throw new Error(`Proto file not found: ${protoPath}`);
+    }
+  });
+
+  // Загрузка ВСЕХ файлов в правильном порядке: сначала зависимости!
+  const packageDefinition = protoLoader.loadSync(
+    [
+      // wrappersProto,     // базовые типы
+      // markTypesProto,    // содержит OffchainMarkType, OnchainMarkType
+      reputationProto,   // использует mark_types.proto
+    ],
+    {
+      keepCase: false,
+      longs: String,
+      enums: Number,
+      defaults: true,
+      oneofs: true,
+      includeDirs: [
+        // googleProtoDir,   // для google/protobuf/...
+        protoDir,         // для metastate/...
+      ],
+    }
+  );
+
+  console.log('gRPC Config: PackageDefinition loaded. Types:', Object.keys(packageDefinition));
+
+  return {
     transport: Transport.GRPC,
     options: {
-      url: process.env.GRPC_BOT_SERVICE_URL || "localhost:50051",
-      package: GROUP_SUMMARY_PACKAGE_NAME,
-      protoPath: join("metastate", "grpc", "bot", "v1", "group_summary.proto"),
-      loader: {
-        keepCase: false,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-        includeDirs: [join(process.cwd(), "node_modules", "@metastate-is", "proto-models")],
+      url: `0.0.0.0:${process.env.GRPC_SERVER_PORT || '50060'}`,
+      package: 'metastate.grpc.spectra.v1',
+      packageDefinition,
+      onLoadPackageDefinition: (pkgDef, server) => {
+        const reflection = new ReflectionService(pkgDef);
+        reflection.addToServer(server);
+        console.log('gRPC Config: Reflection service added with full proto set');
+        return pkgDef;
       },
     },
-  }),
-);
+  };
+});

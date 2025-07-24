@@ -2,7 +2,6 @@ import { CacheModule } from "@nestjs/cache-manager";
 import { Module, NestModule, ValidationPipe } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_PIPE } from "@nestjs/core";
-import { groupSummaryGrpcConfig, newsGrpcConfig } from "./config/grpc.config";
 import kafkaConfig from "./config/kafka.config";
 import loggerConfig from "./config/logger.config";
 import redisConfig from "./config/redis.config";
@@ -16,6 +15,8 @@ import { OffchainModule } from "./modules/offchain/offchain.module";
 import { AppController } from "./app.controller";
 import { EventsModule } from "./modules/events/events.module";
 import { KafkaModule } from "./core/kafka/kafka.module";
+import { grpcListenerConfig } from "./config/grpc.config";
+import { ReputationModule } from "./modules/reputation/reputation.module";
 
 if (process.env.NODE_ENV === "test") {
   // Динамический импорт только в тестовой среде
@@ -30,8 +31,7 @@ const imports = [
       kafkaConfig,
       loggerConfig,
       neo4jConfig,
-      newsGrpcConfig,
-      groupSummaryGrpcConfig,
+      grpcListenerConfig
     ],
     isGlobal: true,
   }),
@@ -55,6 +55,7 @@ const imports = [
   KafkaModule,
   RedisModule,
   Neo4jModule.forRootAsync(),
+  ReputationModule,
   OnchainModule,
   OffchainModule,
   EventsModule,

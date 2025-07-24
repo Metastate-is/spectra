@@ -51,8 +51,8 @@ import { IBaseMark } from "../iterface/base.interface";
  */
 
 export interface IGetMutualMarksResult {
-  fromTo?: boolean | null;
-  toToFrom?: boolean | null;
+  fromTo: boolean | null;
+  toToFrom: boolean | null;
 }
 
 export interface IGetReputationContextResponse extends IGetMutualMarksResult {
@@ -61,10 +61,10 @@ export interface IGetReputationContextResponse extends IGetMutualMarksResult {
 
 export interface CommonParticipant {
   intermediateId: string;
-  intermediateToFrom?: boolean | null;
-  fromToIntermediate?: boolean | null;
-  intermediateToTo?: boolean | null;
-  toToIntermediate?: boolean | null;
+  intermediateToFrom: boolean | null;
+  fromToIntermediate: boolean | null;
+  intermediateToTo: boolean | null;
+  toToIntermediate: boolean | null;
 }
 
 

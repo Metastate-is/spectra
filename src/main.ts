@@ -2,6 +2,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { StructuredLoggerService } from "./core/logger";
+import { GRPC_LISTENER_CONFIG_KEY } from "./config/grpc.config";
 
 interface ExtendedError extends Error {
   cause?: unknown;
@@ -26,10 +27,20 @@ async function bootstrap(): Promise<void> {
     const configService = await app.resolve(ConfigService);
     const port = configService.get<number>("PORT", 3004);
 
-    const kafkaOptions = configService.get("kafka").getClientOptions();
-    app.connectMicroservice(kafkaOptions);
+    const kafkaOptions = configService.get("kafka").getClientOptions({
+      createPartitioner: require('kafkajs').Partitioners.LegacyPartitioner
+    });
+    
+    const grpcOptions = configService.get(GRPC_LISTENER_CONFIG_KEY);
+    if (!grpcOptions) {
+      throw new Error('gRPC listener config is missing');
+    }
+
+    [grpcOptions, kafkaOptions].forEach(options => app.connectMicroservice(options));
 
     await app.startAllMicroservices();
+    l.info('All microservices started successfully');
+    l.info('gRPC packages loaded:', { meta: { packages: grpcOptions.options.package } });
 
     await app.listen(port);
 

@@ -1,0 +1,123 @@
+
+import { GetReputationContextRequest, GetReputationContextResponse } from '@metastate-is/proto-models/generated/metastate/grpc/spectra/v1/reputation_context';
+import { Controller } from '@nestjs/common';
+import { GrpcMethod } from '@nestjs/microservices';
+import { StructuredLoggerService } from 'src/core/logger';
+import { isValidOffchainMarkType, isValidOnchainMarkType } from 'src/utils/validations';
+import { OnchainService } from '../onchain/onchain.service';
+import { OffchainService } from '../offchain/offchain.service';
+import { OffchainMarkTypeMap, OnchainMarkTypeMap } from 'src/type';
+import { IGetReputationContextResponse } from 'src/core/mark/base-makrs.service';
+
+@Controller()
+export class ReputationController {
+  private readonly l = new StructuredLoggerService();
+
+  constructor(
+    private readonly onchainService: OnchainService,
+    private readonly offchainService: OffchainService
+  ) {
+    this.l.setContext(ReputationController.name);
+  }
+  
+  @GrpcMethod('ReputationService', 'GetReputationContext')
+  async getReputationContext(data: GetReputationContextRequest): Promise<GetReputationContextResponse> {
+    this.l.startTrace();
+    try {
+      this.l.info("GetReputationContext", { meta: { data } });
+      console.log("TData: ", data)
+      
+      if (!data.fromParticipantId || !data.toParticipantId) {
+        this.l.warn("Unknown participant id", { meta: { data } });
+        throw new Error("Unknown participant id");
+      }
+
+      if (data.isOnchain) {
+        // @TODO: Валидацию можно вынести в middleware - дублируется в нескольких местах
+        if (data.onchainMarkType && !isValidOnchainMarkType(data.onchainMarkType)) {
+          this.l.warn("Unknown onchain mark type", { meta: { data } });
+          throw new Error("Unknown onchain mark type");
+        }
+
+        this.l.log(`Processing onchain reputation context`, {
+          meta: {
+            data,
+          },
+        });
+
+
+        const result = await this.onchainService.getReputationContext({
+          fromParticipantId: data.fromParticipantId,
+          toParticipantId: data.toParticipantId,
+          markType: OnchainMarkTypeMap[data.onchainMarkType as keyof typeof OnchainMarkTypeMap]!,
+        });
+
+        this.l.log(`Reputation context onchain result`, {
+          meta: {
+            result,
+          },
+        });
+
+        return this.formatReputationContextResponse(result);
+      } else {
+        if (data.offchainMarkType && !isValidOffchainMarkType(data.offchainMarkType)) {
+          this.l.warn("Unknown offchain mark type", { meta: { data } });
+          throw new Error("Unknown offchain mark type");
+        }
+
+        this.l.log(`Processing offchain reputation context`, {
+          meta: {
+            data,
+          },
+        });
+
+        const result = await this.offchainService.getReputationContext({
+          fromParticipantId: data.fromParticipantId,
+          toParticipantId: data.toParticipantId,
+          markType: OffchainMarkTypeMap[data.offchainMarkType as keyof typeof OffchainMarkTypeMap]!,
+        });
+
+        this.l.log(`Reputation context offchain result`, {
+          meta: {
+            result,
+          },
+        });
+
+        return this.formatReputationContextResponse(result);
+      }
+    } catch (e) {
+      console.log(e)
+      this.l.error("GetReputationContext", e as Error);
+      throw e;
+    } finally {
+      this.l.debug("Finished processing reputation context", { meta: { data } });
+      this.l.endTrace();
+    }
+  }
+
+  private formatReputationContextResponse(response: IGetReputationContextResponse): GetReputationContextResponse {
+    return {
+      fromTo: response.fromTo ? {
+        value: response.fromTo,
+      } : undefined,
+      toToFrom: response.toToFrom ? {
+        value: response.toToFrom,
+      } : undefined,
+      commonParticipants: response.commonParticipants.map((participant) => ({
+        intermediateId: participant.intermediateId,
+        intermediateToFrom: participant.intermediateToFrom ? {
+          value: participant.intermediateToFrom,
+        } : undefined,
+        fromToIntermediate: participant.fromToIntermediate ? {
+          value: participant.fromToIntermediate,
+        } : undefined,
+        intermediateToTo: participant.intermediateToTo ? {
+          value: participant.intermediateToTo,
+        } : undefined,
+        toToIntermediate: participant.toToIntermediate ? {
+          value: participant.toToIntermediate,
+        } : undefined,
+      })),
+    };
+  }
+} 
