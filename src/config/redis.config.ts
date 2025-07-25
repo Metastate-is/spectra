@@ -23,7 +23,6 @@ export default registerAs("redis", () => ({
   // Обработка ошибок подключения
   onClientReady: (client: RedisClientType) => {
     client.on("error", (err: Error) => {
-      // В тестовом окружении выводим ошибки в консоль
       if (process.env.NODE_ENV === "test") {
         console.error("Redis Client Error:", err);
       }
