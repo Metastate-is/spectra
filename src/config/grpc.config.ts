@@ -54,7 +54,7 @@ export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
       oneofs: true,
       includeDirs: [
         // googleProtoDir,   // для google/protobuf/...
-        protoDir, // для metastate/...
+        protoDir,
       ],
     },
   );
