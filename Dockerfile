@@ -1,25 +1,52 @@
-FROM node:22
+# Этап сборки (builder)
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
-COPY *.json ./
+# Копируем package.json, package-lock.json и .npmrc
+COPY package*.json ./
 COPY .npmrc ./
 
+# Аргумент для токена GitHub Packages
 ARG GITHUB_TOKEN
-
-RUN echo "@metastate-is:registry=https://npm.pkg.github.com" > .npmrc && \
-    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+# Настраиваем .npmrc с токеном, если он предоставлен
+RUN if [ -n "$GITHUB_TOKEN" ]; then \
+    sed -i "s/\${GITHUB_TOKEN}/$GITHUB_TOKEN/" .npmrc; \
+    fi
 
 # Устанавливаем зависимости
 RUN npm ci
+
 # Копируем исходники
 COPY . .
 
-# Собираем приложение
+# Собираем приложение (Nest build генерирует dist)
 RUN npm run build
 
-# Инициализируем базу данных Neo4j
-RUN npm run cli init-neo4j
+# Производственный этап (production)
+FROM node:20-slim AS production
 
-CMD ["npm", "run", "start:prod"]
+WORKDIR /app
+
+# Создаем непривилегированного пользователя для безопасности
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
+
+# Копируем собранное приложение и зависимости из этапа сборки
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+
+# Копируем entrypoint скрипт и делаем его исполняемым (перед сменой пользователя)
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Указываем пользователя (non-root)
+USER nestjs
+
+# Устанавливаем переменные окружения (добавьте свои, если нужно; в K8s они из configmap)
+ENV NODE_ENV=production
+ENV KAFKA_DISABLED=false
+
+# ENTRYPOINT для init и запуска
+ENTRYPOINT ["/app/entrypoint.sh"]
