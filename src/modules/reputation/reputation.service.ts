@@ -10,6 +10,7 @@ import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
 import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
 import { OffchainService } from "../offchain/offchain.service";
 import { OnchainService } from "../onchain/onchain.service";
+import { isBoolean } from "src/utils/boolean";
 
 @Controller()
 export class ReputationController {
@@ -102,34 +103,34 @@ export class ReputationController {
     response: IGetReputationContextResponse,
   ): GetReputationContextResponse {
     return {
-      fromTo: response.fromTo
+      fromTo: isBoolean(response.fromTo)
         ? {
             value: response.fromTo,
           }
         : undefined,
-      toToFrom: response.toToFrom
+      toToFrom: isBoolean(response.toToFrom)
         ? {
             value: response.toToFrom,
           }
         : undefined,
       commonParticipants: response.commonParticipants.map((participant) => ({
         intermediateId: participant.intermediateId,
-        intermediateToFrom: participant.intermediateToFrom
+        intermediateToFrom: isBoolean(participant.intermediateToFrom)
           ? {
               value: participant.intermediateToFrom,
             }
           : undefined,
-        fromToIntermediate: participant.fromToIntermediate
+        fromToIntermediate: isBoolean(participant.fromToIntermediate)
           ? {
               value: participant.fromToIntermediate,
             }
           : undefined,
-        intermediateToTo: participant.intermediateToTo
+        intermediateToTo: isBoolean(participant.intermediateToTo)
           ? {
               value: participant.intermediateToTo,
             }
           : undefined,
-        toToIntermediate: participant.toToIntermediate
+        toToIntermediate: isBoolean(participant.toToIntermediate)
           ? {
               value: participant.toToIntermediate,
             }
