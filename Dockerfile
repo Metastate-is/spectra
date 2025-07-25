@@ -6,11 +6,10 @@ WORKDIR /app
 COPY *.json ./
 COPY .npmrc ./
 
-ARG NPM_TOKEN
-# Настраиваем .npmrc с токеном, если он предоставлен
-RUN if [ -n "$NPM_TOKEN" ]; then \
-  sed -i "s/\${GITHUB_TOKEN}/$NPM_TOKEN/" .npmrc; \
-  fi
+ARG GITHUB_TOKEN
+
+RUN echo "@metastate-is:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
 
 # Устанавливаем зависимости
 RUN npm ci
