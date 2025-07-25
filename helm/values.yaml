@@ -21,7 +21,15 @@ serviceAccount:
 
 service:
   type: ClusterIP
-  port: 3000
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: grpc
+      port: 50060
+      targetPort: 50060
+      protocol: TCP
   annotations:
     prometheus.io/scrape: 'true'
     prometheus.io/path: /metrics
