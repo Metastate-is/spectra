@@ -391,7 +391,6 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     `;
 
     try {
-
       const result = await this.neo4jService.runQuery(query, {
         userA: mark.fromParticipantId,
         userB: mark.toParticipantId,
@@ -408,11 +407,11 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
       // Преобразование Integer в number
       const positive = record.get("positive") ? record.get("positive").toNumber() : 0;
       const negative = record.get("negative") ? record.get("negative").toNumber() : 0;
-      
+
       return {
         positive,
         negative,
-      };      
+      };
     } catch (e) {
       this.logger.error("Failed to get reputation count", e);
       return { positive: 0, negative: 0 };

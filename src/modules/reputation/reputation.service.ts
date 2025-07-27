@@ -2,16 +2,19 @@ import {
   GetReputationContextRequest,
   GetReputationContextResponse,
 } from "@metastate-is/proto-models/generated/metastate/grpc/spectra/v1/reputation_context";
+import {
+  GetReputationCountRequest,
+  GetReputationCountResponse,
+} from "@metastate-is/proto-models/generated/metastate/grpc/spectra/v1/reputation_count";
 import { Controller } from "@nestjs/common";
 import { GrpcMethod } from "@nestjs/microservices";
 import { StructuredLoggerService } from "src/core/logger";
 import { IGetReputationContextResponse } from "src/core/mark/base-marks.service";
 import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
+import { isBoolean } from "src/utils/boolean";
 import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
 import { OffchainService } from "../offchain/offchain.service";
 import { OnchainService } from "../onchain/onchain.service";
-import { isBoolean } from "src/utils/boolean";
-import { GetReputationCountRequest, GetReputationCountResponse } from "@metastate-is/proto-models/generated/metastate/grpc/spectra/v1/reputation_count";
 
 @Controller()
 export class ReputationController {
@@ -101,9 +104,7 @@ export class ReputationController {
   }
 
   @GrpcMethod("ReputationCountService", "GetReputationCount")
-  async getReputationCount(
-    data: GetReputationCountRequest,
-  ): Promise<GetReputationCountResponse> {
+  async getReputationCount(data: GetReputationCountRequest): Promise<GetReputationCountResponse> {
     this.l.startTrace();
 
     try {
