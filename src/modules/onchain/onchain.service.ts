@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TransactionPromise } from "neo4j-driver-core";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
-import { BaseMarkService, IGetReputationContextResponse } from "src/core/mark/base-marks.service";
+import { BaseMarkService, IGetReputationContextResponse, IGetReputationCountResponse } from "src/core/mark/base-marks.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { cypher } from "src/utils/cypher";
 import { formatEventPayload } from "src/utils/kafka/format-event-created";
@@ -138,5 +138,11 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     mark: Omit<IOnchainMark, "value">,
   ): Promise<IGetReputationContextResponse> {
     return await super.getReputationContext(mark as IOnchainMark);
+  }
+
+  async getReputationCount(
+    mark: Omit<IOnchainMark, "value">,
+  ): Promise<IGetReputationCountResponse> {
+    return await super.getReputationCount(mark as IOnchainMark);
   }
 }

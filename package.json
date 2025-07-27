@@ -27,7 +27,7 @@
 	"dependencies": {
 		"@biomejs/biome": "^1.5.3",
 		"@grpc/reflection": "^1.0.4",
-		"@metastate-is/proto-models": "^1.23.0",
+		"@metastate-is/proto-models": "^1.25.0",
 		"@nestjs/cache-manager": "^3.0.1",
 		"@nestjs/common": "^11.1.3",
 		"@nestjs/config": "^4.0.2",
