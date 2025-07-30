@@ -6,12 +6,12 @@ import {
   OnchainMarkTypeMap,
 } from "../../type";
 
-export const formatEventPayload = async (
+export const formatEventPayload = (
   mark: any,
   markType: OffchainMarkType | OnchainMarkType,
   onchain: boolean,
   e?: Error,
-): Promise<MarkCreated> => {
+): MarkCreated => {
   const KSUID = require("ksuid");
   const eventId = KSUID.randomSync().string;
 
