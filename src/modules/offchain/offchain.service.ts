@@ -145,7 +145,7 @@ export class OffchainService extends BaseMarkService<IOffchainMark> {
 
   protected async sendEventCreateMark(mark: IOffchainMark, e?: Error): Promise<void> {
     try {
-      const payload = formatEventPayload(mark, mark.markType, this.onchain, e);
+      const payload = await formatEventPayload(mark, mark.markType, this.onchain, e);
 
       await this.kafkaService.sendMarkCreated(payload);
 
