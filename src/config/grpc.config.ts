@@ -26,10 +26,19 @@ export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
     "v1",
     "reputation_context.proto",
   );
+
+  const reputationCountProto = join(
+    protoDir,
+    "metastate",
+    "grpc",
+    "spectra",
+    "v1",
+    "reputation_count.proto",
+  );
   // const wrappersProto = join(googleProtoDir, 'google', 'protobuf', 'wrappers.proto');
 
   // Проверка существования
-  [reputationProto].forEach((protoPath) => {
+  [reputationProto, reputationCountProto].forEach((protoPath) => {
     console.log("gRPC Config: Proto path:", protoPath);
     if (fs.existsSync(protoPath)) {
       console.log("gRPC Config: ✅ File exists");
@@ -45,6 +54,7 @@ export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
       // wrappersProto,     // базовые типы
       // markTypesProto,    // содержит OffchainMarkType, OnchainMarkType
       reputationProto, // использует mark_types.proto
+      reputationCountProto,
     ],
     {
       keepCase: false,
@@ -58,8 +68,6 @@ export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
       ],
     },
   );
-
-  console.log("gRPC Config: PackageDefinition loaded. Types:", Object.keys(packageDefinition));
 
   return {
     transport: Transport.GRPC,

@@ -145,7 +145,9 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     });
 
     try {
-      const result = await this.send(topic, markCreatedMessage);
+      const bufferMessage = Buffer.from(JSON.stringify(markCreatedMessage));
+
+      const result = await this.send(topic, bufferMessage);
       if (result) {
         this.l.info("Mark created message sent successfully", {
           meta: { result },
