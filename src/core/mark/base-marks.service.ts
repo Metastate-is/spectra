@@ -73,7 +73,7 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
   protected readonly logger = new StructuredLoggerService();
 
   protected abstract create(mark: TMark, tx: TransactionPromise): Promise<TMark>;
-  protected abstract update(mark: TMark, tx: TransactionPromise): Promise<void>;
+  protected abstract update(mark: TMark, tx: TransactionPromise): Promise<TMark>;
   protected abstract sendEventCreateMark(mark: TMark, e?: Error): Promise<void>;
 
   constructor(
@@ -92,7 +92,6 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     const tx = session.beginTransaction();
 
     let upsertedMark: TMark | null = null;
-    let isExisting = false;
 
     try {
       await this.createParticipantIfNotExists(mark.fromParticipantId, tx);
@@ -100,24 +99,20 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
 
       const existing = await this.findOne(mark, tx);
       if (existing) {
-        isExisting = true;
-        await this.update(mark, tx);
+        upsertedMark = await this.update(mark, tx);
         await tx.commit();
       } else {
         upsertedMark = await this.create(mark, tx);
         await tx.commit();
-        await this.sendEventCreateMark(upsertedMark);
       }
+      await this.sendEventCreateMark(upsertedMark);
 
       return true;
     } catch (e) {
       this.logger.error("Error creating/updating mark", e);
       await tx.rollback();
 
-      // Отправляем событие что создать связь не удалось
-      if (!isExisting) {
-        await this.sendEventCreateMark(mark, e);
-      }
+      await this.sendEventCreateMark(mark, e);
 
       return false;
     } finally {

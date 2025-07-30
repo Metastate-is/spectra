@@ -84,7 +84,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
    * Обновление существующей оффчейн-марк
    * @param markData
    */
-  protected async update(markData: IOnchainMark, tx: TransactionPromise): Promise<void> {
+  protected async update(markData: IOnchainMark, tx: TransactionPromise): Promise<IOnchainMark> {
     try {
       const queryParams = {
         fromParticipantId: markData.fromParticipantId,
@@ -107,13 +107,25 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
         RETURN mark
       `;
 
-      await tx.run(query, queryParams);
+      const result = await tx.run(query, queryParams);
+
+      const record = result.records[0];
+      if (!record || !record.has("mark")) {
+        throw new Error("Mark not updated or missing in response");
+      }
+
+      const mark = record.get("mark").properties;
 
       this.logger.log("OnchainService update result", {
         meta: {
-          queryParams,
+          mark,
         },
       });
+
+      return {
+        ...mark,
+        ...queryParams,
+      };
     } catch (e) {
       this.logger.error("Error updating existing mark", e);
       throw e;
