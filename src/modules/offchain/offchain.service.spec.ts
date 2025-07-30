@@ -116,7 +116,21 @@ describe("OffchainService", () => {
             },
           ],
         })
-        .mockResolvedValueOnce({}); // update
+        .mockResolvedValueOnce({
+          records: [
+            {
+              get: () => ({
+                properties: {
+                  id: "some-uuid",
+                  value: false,
+                  createdAt: "2025-07-09T09:00:00Z",
+                  updatedAt: "2025-07-09T09:00:00Z",
+                },
+              }),
+              has: (key: string) => key === "mark",
+            },
+          ],
+        }); // update
 
       const markToUpdate = { ...mockMark, value: false };
 

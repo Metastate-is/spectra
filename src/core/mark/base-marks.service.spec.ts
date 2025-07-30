@@ -30,9 +30,9 @@ class TestMarkService extends BaseMarkService<IOffchainMark> {
     return Promise.resolve(mark);
   }
 
-  async update(): Promise<void> {
+  async update(mark: IOffchainMark): Promise<IOffchainMark> {
     // Просто эмуляция успешного обновления
-    return Promise.resolve();
+    return Promise.resolve(mark);
   }
 
   async sendEventCreateMark(): Promise<void> {
