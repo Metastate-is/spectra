@@ -1,7 +1,7 @@
 import { Controller, Get, UsePipes, ValidationPipe } from "@nestjs/common";
 import { StructuredLoggerService } from "./core/logger";
 import { OffchainService } from "./modules/offchain/offchain.service";
-import { OffchainMarkType } from "./type";
+import { OffchainMarkTypeEnum } from "./type";
 
 @Controller()
 export class AppController {
@@ -18,7 +18,7 @@ export class AppController {
     return this.offchainService.getReputationContext({
       fromParticipantId: "user123",
       toParticipantId: "user456",
-      markType: OffchainMarkType.BUSINESS_FEEDBACK,
+      markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
     });
   }
 }

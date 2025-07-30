@@ -1,12 +1,12 @@
 import type { DateTime } from "neo4j-driver";
-import { OffchainMarkType, OnchainMarkType } from "src/type";
+import { OffchainMarkTypeEnum, OnchainMarkTypeEnum } from "src/type";
 
 export interface IBaseMark {
   id?: string;
   fromParticipantId: string;
   toParticipantId: string;
   value: boolean;
-  markType: OnchainMarkType | OffchainMarkType;
+  markType: OnchainMarkTypeEnum | OffchainMarkTypeEnum;
   createdAt?: DateTime;
   updatedAt?: DateTime;
 }

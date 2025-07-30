@@ -1,6 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
+import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
 import { OffchainMarkType } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_types";
 import { Kafka, logLevel } from "kafkajs";
@@ -15,7 +16,7 @@ import { Kafka, logLevel } from "kafkajs";
  * - request: send to spectra.mark.request.v1 (default)
  */
 
-const samplePayload: MarkRequest = {
+const samplePayload: MarkCreated = {
   fromParticipantId: "user123",
   toParticipantId: "test-participant-123",
   isOnchain: false,
@@ -38,13 +39,13 @@ async function produceMessage() {
   const producer = kafka.producer();
   await producer.connect();
 
-  const topicName = KAFKA_TOPICS.SPECTRA.MARK.REQUEST;
+  const topicName = KAFKA_TOPICS.SPECTRA.MARK.CREATED;
 
   await producer.send({
     topic: topicName,
     messages: [
       {
-        value: Buffer.from(JSON.stringify(samplePayload)),
+        value: Buffer.from(MarkCreated.encode(samplePayload).finish()),
       },
     ],
   });
