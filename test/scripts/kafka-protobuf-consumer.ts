@@ -12,7 +12,7 @@
  */
 
 import { KAFKA_TOPICS } from "@metastate-is/proto-models";
-import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
+import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 import { Kafka, logLevel } from "kafkajs";
 
 /**
@@ -20,8 +20,8 @@ import { Kafka, logLevel } from "kafkajs";
  */
 async function consumeRelationMessages() {
   // Determine topic and decoder based on args
-  const topicName = KAFKA_TOPICS.SPECTRA.MARK.REQUEST;
-  const decoder = MarkRequest;
+  const topicName = KAFKA_TOPICS.SPECTRA.MARK.CREATED;
+  const decoder = MarkCreated;
 
   console.log("Starting Kafka consumer for spectra.mark.request.v1 topic");
 
@@ -57,6 +57,8 @@ async function consumeRelationMessages() {
             console.log("Message has no value");
             return;
           }
+
+          console.log("message.value", message.value);
 
           // Decoding message from Protobuf
           const decodedMessage = decoder.decode(message.value);

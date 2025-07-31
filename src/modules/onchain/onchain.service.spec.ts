@@ -4,8 +4,8 @@ import neo4j from "neo4j-driver";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { OnchainMarkType } from "src/type";
 import { OnchainService } from "./onchain.service";
+import { OnchainMarkTypeEnum } from "src/type";
 
 describe("OnchainService", () => {
   let service: OnchainService;
@@ -14,7 +14,7 @@ describe("OnchainService", () => {
   const mockMark: IOnchainMark = {
     fromParticipantId: "1",
     toParticipantId: "2",
-    markType: OnchainMarkType.TRUST,
+    markType: OnchainMarkTypeEnum.TRUST,
     value: true,
     txHash: "1",
     confirmedAt: new DateTime(

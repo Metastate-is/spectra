@@ -1,6 +1,6 @@
 import { Command, CommandRunner } from "nest-commander";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { OffchainMarkType, OnchainMarkType } from "src/type";
+import { OffchainMarkTypeEnum, OnchainMarkTypeEnum } from "src/type";
 import { cypher } from "src/utils/cypher";
 import { StructuredLoggerService } from "../../core/logger";
 
@@ -36,8 +36,8 @@ export class InitNeo4jCommand extends CommandRunner {
 
     try {
       const types = [
-        ...Object.values(OnchainMarkType).map((name) => ({ name, onchain: true })),
-        ...Object.values(OffchainMarkType).map((name) => ({ name, onchain: false })),
+        ...Object.values(OnchainMarkTypeEnum).map((name) => ({ name, onchain: true })),
+        ...Object.values(OffchainMarkTypeEnum).map((name) => ({ name, onchain: false })),
       ];
 
       for (const type of types) {

@@ -1,6 +1,6 @@
 import { TransactionPromise } from "neo4j-driver-core";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { OffchainMarkType } from "src/type";
+import { OffchainMarkTypeEnum } from "src/type";
 import { IOffchainMark } from "../iterface/offchain.interface";
 import { BaseMarkService } from "./base-marks.service";
 
@@ -53,7 +53,7 @@ describe("BaseMarkService", () => {
   const mockMark: IOffchainMark = {
     fromParticipantId: "from-id",
     toParticipantId: "to-id",
-    markType: OffchainMarkType.RELATION,
+    markType: OffchainMarkTypeEnum.RELATION,
     value: true,
   };
 

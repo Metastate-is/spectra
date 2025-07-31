@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
-import { OffchainMarkType } from "src/type";
+import { OffchainMarkTypeEnum } from "src/type";
 import { OffchainService } from "./offchain.service";
 
 describe("OffchainService", () => {
@@ -12,7 +12,7 @@ describe("OffchainService", () => {
   const mockMark: IOffchainMark = {
     fromParticipantId: "11",
     toParticipantId: "21",
-    markType: OffchainMarkType.RELATION,
+    markType: OffchainMarkTypeEnum.RELATION,
     value: true,
   };
 

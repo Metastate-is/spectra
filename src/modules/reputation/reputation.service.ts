@@ -143,6 +143,7 @@ export class ReputationController {
         return {
           positiveCount: result.positive,
           negativeCount: result.negative,
+          commonCount: result.commonCount,
         };
       }
 
@@ -172,6 +173,7 @@ export class ReputationController {
       return {
         positiveCount: result.positive,
         negativeCount: result.negative,
+        commonCount: result.commonCount,
       };
     } catch (e) {
       this.l.error("GetReputationCount", e as Error);

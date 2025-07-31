@@ -1,17 +1,17 @@
 import { MarkCreated } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_created";
 import {
-  OffchainMarkType,
-  OffchainMarkTypeMap,
-  OnchainMarkType,
-  OnchainMarkTypeMap,
+  OffchainMarkTypeEnum,
+  OffchainMarkTypeMapInx,
+  OnchainMarkTypeEnum,
+  OnchainMarkTypeMapInx,
 } from "../../type";
 
-export const formatEventPayload = async (
+export const formatEventPayload = (
   mark: any,
-  markType: OffchainMarkType | OnchainMarkType,
+  markType: OffchainMarkTypeEnum | OnchainMarkTypeEnum,
   onchain: boolean,
   e?: Error,
-): Promise<MarkCreated> => {
+): MarkCreated => {
   const KSUID = require("ksuid");
   const eventId = KSUID.randomSync().string;
 
@@ -28,9 +28,9 @@ export const formatEventPayload = async (
   };
 
   if (onchain) {
-    payload.onchainMarkType = OnchainMarkTypeMap[markType];
+    payload.onchainMarkType = OnchainMarkTypeMapInx[markType]; 
   } else {
-    payload.offchainMarkType = OffchainMarkTypeMap[markType];
+    payload.offchainMarkType = OffchainMarkTypeMapInx[markType];
   }
 
   if (e) {
