@@ -71,6 +71,7 @@ export interface CommonParticipant {
 export interface IGetReputationCountResponse {
   positive: number;
   negative: number;
+  commonCount: number;
 }
 
 export abstract class BaseMarkService<TMark extends IBaseMark> {
@@ -325,91 +326,45 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
 
   /**
    * Получает количество положительных (`value = true`) и отрицательных (`value = false`) оценок,
-   * поставленных другим пользователям по отношению к участнику `toParticipantId` (userB), но только в том случае,
-   * если эти другие пользователи (intermediate) имели **взаимодействие** и с `fromParticipantId` (userA), и с `toParticipantId` (userB).
-   *
-   * Под **взаимодействием** понимается наличие хотя бы одной оценки (в любом направлении) между intermediate и userA:
-   * - либо intermediate → userA
-   * - либо userA → intermediate
-   *
-   * Учитываются только оценки указанного типа (`MarkType.name`) и значения `onchain`.
-   *
-   * Применение:
-   * - Анализ социальных связей и контекста репутации пользователя `userB`
-   * - Оценка "общественного мнения" об участнике `userB` со стороны участников, с которыми взаимодействовал `userA`
-   *
-   * Cypher-граф:
-   *
-   * (intermediate)-[:GAVE]->(markToB:Mark {value})-[:ABOUT]->(userB)
-   *                      ↘                     ↙
-   *              (:MarkType {name, onchain})
-   *
-   * Дополнительно:
-   * - (:intermediate)-[:GAVE]->(:Mark)-[:ABOUT]->(userA)
-   * - (userA)-[:GAVE]->(:Mark)-[:ABOUT]->(:intermediate)
-   *
-   * @param mark Объект оценки, содержащий fromParticipantId (userA), toParticipantId (userB), markType и onchain
-   * @returns Объект с числом положительных и отрицательных оценок `userB` от участников, имевших контакт с `userA`
+   *      * Получает оценки типа "BusinessFeedback" (offchain) между двумя участниками:
+     * - от userA к userB
+     * - от userB к userA
+     *
+     * Пример
+    * user1 -> user2 
+    * 
+    * Мы должны найти между ними пользователя 
+    * Между ними пользователей должно быть 0
+    * 
+    * user2 -> user3
+    * user1 -> user4
+    * 
+    * Между ними пользователей должно быть user5
+    * user5 -> user1
+    * user5 -> user2
+    * 
+    * Между ними пользователей должно быть user5 и user6
+    * user1 -> user6
+    * user2 -> user6  
+    * 
+    * Независит какое значение true или false 
+    * Нужно найти само наличие связи
    */
   protected async getReputationCount(mark: TMark): Promise<IGetReputationCountResponse> {
-    const query = cypher /* cypher */`
-      // Находим тип оценки
-      MATCH (type:MarkType {name: $markType, onchain: $onchain})
-
-      MATCH (intermediate:Participant)
-      WHERE intermediate.participantId <> $userA AND intermediate.participantId <> $userB
-
-      OPTIONAL MATCH (intermediate)-[:GAVE]->(m1:Mark)-[:ABOUT]->(a1:Participant {participantId: $userA})
-      WHERE (m1)-[:OF_TYPE]->(type)
-
-      OPTIONAL MATCH (a2:Participant {participantId: $userA})-[:GAVE]->(m2:Mark)-[:ABOUT]->(intermediate)
-      WHERE (m2)-[:OF_TYPE]->(type)
-
-      OPTIONAL MATCH (intermediate)-[:GAVE]->(m3:Mark)-[:ABOUT]->(b1:Participant {participantId: $userB})
-      WHERE (m3)-[:OF_TYPE]->(type)
-
-      OPTIONAL MATCH (b2:Participant {participantId: $userB})-[:GAVE]->(m4:Mark)-[:ABOUT]->(intermediate)
-      WHERE (m4)-[:OF_TYPE]->(type)
-
-      WITH intermediate,
-          m1.value AS intermediateToUserA,
-          m2.value AS userAToIntermediate,
-          m3.value AS intermediateToUserB,
-          m4.value AS userBToIntermediate
-
-      WHERE (intermediateToUserA IS NOT NULL OR userAToIntermediate IS NOT NULL)
-        AND (intermediateToUserB IS NOT NULL OR userBToIntermediate IS NOT NULL)
-
-      RETURN
-        count(CASE WHEN intermediateToUserB = true THEN 1 END) AS positive,
-        count(CASE WHEN intermediateToUserB = false THEN 1 END) AS negative
-    `;
-
-    try {
-      const result = await this.neo4jService.runQuery(query, {
-        userA: mark.fromParticipantId,
-        userB: mark.toParticipantId,
-        onchain: this.onchain,
-        markType: mark.markType,
-      });
-
-      if (result.records.length === 0) {
-        return { positive: 0, negative: 0 };
-      }
-
-      const record = result.records[0];
-
-      // Преобразование Integer в number
-      const positive = record.get("positive") ? record.get("positive").toNumber() : 0;
-      const negative = record.get("negative") ? record.get("negative").toNumber() : 0;
-
+    try{
+      const commonParticipants = await this.findCommonParticipants(mark);
+      const positive = commonParticipants.filter((p) => p.intermediateToTo === true).length;
+      const negative = commonParticipants.filter((p) => p.intermediateToTo === false).length;
+      const commonCount = commonParticipants.length;
+      
       return {
         positive,
         negative,
+        commonCount,
       };
     } catch (e) {
       this.logger.error("Failed to get reputation count", e);
-      return { positive: 0, negative: 0 };
+      return { positive: 0, negative: 0, commonCount: 0 };
     }
   }
 }

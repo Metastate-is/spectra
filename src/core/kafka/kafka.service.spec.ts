@@ -128,7 +128,7 @@ describe("KafkaService", () => {
 
       const result = await service.sendMarkCreated(message);
 
-      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.SPECTRA.MARK.CREATED, message);
+      expect(sendSpy).toHaveBeenCalledWith(KAFKA_TOPICS.SPECTRA.MARK.CREATED, Buffer.from(JSON.stringify(message)));
       expect(result).toEqual({ status: "ok" });
     });
   });
