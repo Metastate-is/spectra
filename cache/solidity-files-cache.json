@@ -1,0 +1,41 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/david/project/uhs/spectra/contracts/ReputationStorage.sol": {
+      "lastModificationDate": 1754391997179,
+      "contentHash": "130e4ffd1fb75e91b380c230954d31af",
+      "sourceName": "contracts/ReputationStorage.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ReputationStorage"
+      ]
+    }
+  }
+}

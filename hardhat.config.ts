@@ -6,9 +6,10 @@ dotenv.config();
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
   networks: {
-    sepolia: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-      accounts: [process.env.INFURA_PRIVATE_KEY as string],
+    metastate: {
+      url: process.env.RPC_URL,
+      accounts: [process.env.RPC_PRIVATE_KEY!],
+      chainId: 55681
     },
   },
 };
