@@ -27,8 +27,8 @@ export class ReputationContractService {
   }
 
   async storeMark(
-    fromParticipantId: number,
-    toParticipantId: number,
+    fromParticipantId: string,
+    toParticipantId: string,
     value: boolean,
     markType: string
   ): Promise<void> {

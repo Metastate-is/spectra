@@ -1,12 +1,13 @@
 import { Controller, Get, UsePipes, ValidationPipe } from "@nestjs/common";
 import { StructuredLoggerService } from "./core/logger";
 import { OffchainService } from "./modules/offchain/offchain.service";
-import { OffchainMarkTypeEnum } from "./type";
+import { OffchainMarkTypeEnum, OnchainMarkTypeEnum } from "./type";
+import { OnchainService } from "./modules/onchain/onchain.service";
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly offchainService: OffchainService,
+    private readonly onchainService: OnchainService,
     private readonly logger: StructuredLoggerService,
   ) {
     this.logger.setContext(AppController.name);
@@ -15,10 +16,10 @@ export class AppController {
   @Get("/get-mark")
   @UsePipes(new ValidationPipe({ transform: true }))
   getMark() {
-    return this.offchainService.getReputationContext({
+    return this.onchainService.getReputationContext({
       fromParticipantId: "user1",
       toParticipantId: "user2",
-      markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
+      markType: OnchainMarkTypeEnum.TRUST,
     });
   }
 
@@ -61,12 +62,12 @@ export class AppController {
     
     // //
 
-    // await this.offchainService.process({
-    //   fromParticipantId: "user2",
-    //   toParticipantId: "user3",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
+    await this.onchainService.process({
+      fromParticipantId: "user2",
+      toParticipantId: "user3",
+      markType: OnchainMarkTypeEnum.TRUST,
+      value: true,
+    });
 
     // await this.offchainService.process({
     //   fromParticipantId: "user1",
