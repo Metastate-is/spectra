@@ -17,7 +17,7 @@ on:
       rollback_revision: { description: 'Helm revision (empty → previous)', required: false, default: '' }
       # --- tag-rollback ---
       rollback_to_tag:   { description: 'Redeploy with specific Docker tag', required: false, default: '' }
-      rollback_namespace:{ description: 'Namespace override for rollback', required: false, default: '' }
+      rollback_namespace: { description: 'Namespace override for rollback', required: false, default: '' }
 
 env:
   PROJECT_ID:  ${{ secrets.GCP_PROJECT_ID }}
