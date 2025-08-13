@@ -1,0 +1,99 @@
+replicaCount: 1
+
+image:
+  repository: 
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets:
+  - name: docker-registry-secret
+
+
+resources:
+  limits:
+    memory: "512Mi"
+  requests:
+    memory: "256Mi"  
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: grpc
+      port: 50060
+      targetPort: 50060
+      protocol: TCP
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: /metrics
+    prometheus.io/port: '3000'
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 15
+  periodSeconds: 5
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: false
+  # className: "nginx"
+  # annotations: 
+  #   kubernetes.io/ingress.class: nginx
+  #   kubernetes.io/ingress.global-static-ip-name: gke-ingress-static-ip
+  #   cert-manager.io/cluster-issuer: "letsencrypt-http"
+  #   nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # hosts:
+  #   - host: api.uhs.is
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # tls:
+  #   - hosts:
+  #       - api.uhs.is
+  #     secretName: api-tls
+
+# Новая секция configmap
+configmap:
+  enabled: true
+  name: values-bot
+  data:
+    PORT: 3000
+    GRPC_SERVER_PORT: 50060
+    KAFKA_BROKERS: metaapp-uh-cluster-kafka-bootstrap.kafka-uh.svc:9092
+    NEO4_URL: neo4j://my-neo4j-release.neo4j.svc.cluster.local:7687
+    NEO4J_PASSWORD: UGFE1WsBWmCpI3
+    NEO4J_USER: neo4j
+
+
+# Секция для секретов
+secrets:
+  enabled: false
+  name: secret-values
+  data: {}
+
+# точечно выгрузить переменную из vault
+deployment:
+  envVars:
+#     API_KEY: "vault:secret/data/metastate-bot/config#testit"
