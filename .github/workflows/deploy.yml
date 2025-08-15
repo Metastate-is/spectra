@@ -39,6 +39,8 @@ env:
   NEXT_PUBLIC_BOT_TOKEN:     ${{ secrets.NEXT_PUBLIC_BOT_TOKEN }}
   NEXT_PUBLIC_GRAPHQL_URL:   ${{ secrets.NEXT_PUBLIC_GRAPHQL_URL }}
   NEXT_PUBLIC_BOT_USERNAME:  ${{ secrets.NEXT_PUBLIC_BOT_USERNAME }}
+  RPC_PRIVATE_KEY:  ${{ secrets.RPC_PRIVATE_KEY }}
+
 
 permissions:
   id-token: write
@@ -87,10 +89,12 @@ jobs:
             echo "NEXT_PUBLIC_BOT_TOKEN=${{ secrets.UH_NEXT_PUBLIC_BOT_TOKEN }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.UH_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_BOT_USERNAME=${{ secrets.UH_NEXT_PUBLIC_BOT_USERNAME }}" >> $GITHUB_ENV
+            echo "RPC_PRIVATE_KEY=${{ secrets.UH_RPC_PRIVATE_KEY }}" >> $GITHUB_ENV
           elif [[ "$DEPLOY_NAMESPACE" == "metaapp-prod" ]]; then
             echo "NEXT_PUBLIC_BOT_TOKEN=${{ secrets.PROD_NEXT_PUBLIC_BOT_TOKEN }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.PROD_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_BOT_USERNAME=${{ secrets.PROD_NEXT_PUBLIC_BOT_USERNAME }}" >> $GITHUB_ENV
+            echo "RPC_PRIVATE_KEY=${{ secrets.PROD_RPC_PRIVATE_KEY }}" >> $GITHUB_ENV
           fi
 
       # auth ------------------------------------------------------------
@@ -133,6 +137,7 @@ jobs:
                                    --build-arg NEXT_PUBLIC_BOT_TOKEN=$NEXT_PUBLIC_BOT_TOKEN \
                                    --build-arg NEXT_PUBLIC_GRAPHQL_URL=$NEXT_PUBLIC_GRAPHQL_URL \
                                    --build-arg NEXT_PUBLIC_BOT_USERNAME=$NEXT_PUBLIC_BOT_USERNAME \
+                                   --build-arg RPC_PRIVATE_KEY=$RPC_PRIVATE_KEY \
                                    -t \"$HASH\""
           [[ -n "$TAG" ]] && build_cmd="$build_cmd -t \"$TAG\""
           eval "$build_cmd ."

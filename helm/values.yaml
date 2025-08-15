@@ -83,6 +83,8 @@ configmap:
     NEO4_URL: neo4j://my-neo4j-release.neo4j.svc.cluster.local:7687
     NEO4J_PASSWORD: UGFE1WsBWmCpI3
     NEO4J_USER: neo4j
+    RPC_URL: https://rpc-node.metastate.is/
+    REPUTATION_CONTRACT_ADDRESS: 0x263dd68544fD8081a878103b2e601D8a85555370
 
 # Секция для секретов
 secrets:
