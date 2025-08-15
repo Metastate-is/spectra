@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@biomejs/biome": "^1.5.3",
+		"@ethersproject/strings": "^5.8.0",
 		"@grpc/reflection": "^1.0.4",
 		"@metastate-is/proto-models": "^1.27.0",
 		"@nestjs/cache-manager": "^3.0.1",

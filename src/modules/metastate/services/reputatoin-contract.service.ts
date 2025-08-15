@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ethers, JsonRpcProvider } from "ethers";
+import { JsonRpcProvider, ethers } from "ethers";
+import { formatBytes32String } from "@ethersproject/strings";
 import abi from "../../../../artifacts/contracts/ReputationStorage.sol/ReputationStorage.json";
 import { ConfigService } from "@nestjs/config";
 import { SafeTransactionService } from "./safe-transaction.service";
@@ -20,22 +21,30 @@ export class ReputationContractService {
       return;
     }
 
-    const provider = new JsonRpcProvider(rpcUrl);
-    const signer = new ethers.Wallet(privateKey, provider);
+    try {
+      const provider = new JsonRpcProvider(rpcUrl);
+      const signer = new ethers.Wallet(privateKey, provider);
 
-    this.contract = new ethers.Contract(contractAddress, abi.abi, signer);
+      this.contract = new ethers.Contract(contractAddress, abi.abi, signer);
+    } catch (error) {
+      this.logger.error("Failed to initialize reputation contract", error);
+    }
   }
 
-  async storeMark(
+  async storeOrUpdateMark(
     fromParticipantId: string,
     toParticipantId: string,
     value: boolean,
     markType: string
   ): Promise<void> {
     this.logger.log("Storing mark onchain...");
-    await this.safeTransactionService.sendTransactionWithRetry(() =>
-      this.contract.storeMark(fromParticipantId, toParticipantId, value, markType)
-    );
+    await this.safeTransactionService.sendTransactionWithRetry(() => {
+      const formatMarkType = formatBytes32String(markType)
+      const formatfromParticipantId = formatBytes32String(fromParticipantId);
+      const formatToParticipantId = formatBytes32String(toParticipantId);
+    
+      return this.contract.storeOrUpdateMark(formatfromParticipantId, formatToParticipantId, value, formatMarkType)  
+    });
     this.logger.log("Mark stored onchain");
   }
 }

@@ -28,7 +28,12 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     const isTrue = await super.process(mark);
 
     if (isTrue) {
-      await this.reputationContractService.storeMark(mark.fromParticipantId, mark.toParticipantId, mark.value, mark.markType);
+      await this.reputationContractService.storeOrUpdateMark(
+        mark.fromParticipantId,
+        mark.toParticipantId,
+        mark.value,
+        mark.markType
+      );
     }
 
     return isTrue;

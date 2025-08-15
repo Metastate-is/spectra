@@ -63,7 +63,7 @@ export class SyncMetaStateCommand extends CommandRunner {
       }));
 
       for (const mark of marks) {
-        await this.reputationContractService.storeMark(
+        await this.reputationContractService.storeOrUpdateMark(
           mark.fromParticipantId,
           mark.toParticipantId,
           mark.value,

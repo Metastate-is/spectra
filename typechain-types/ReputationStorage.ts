@@ -25,20 +25,20 @@ import type {
 
 export declare namespace ReputationStorage {
   export type MarkStruct = {
-    fromParticipantId: BigNumberish;
-    toParticipantId: BigNumberish;
+    fromParticipantId: BytesLike;
+    toParticipantId: BytesLike;
     value: boolean;
-    markType: string;
+    markType: BytesLike;
   };
 
   export type MarkStructOutput = [
-    fromParticipantId: bigint,
-    toParticipantId: bigint,
+    fromParticipantId: string,
+    toParticipantId: string,
     value: boolean,
     markType: string
   ] & {
-    fromParticipantId: bigint;
-    toParticipantId: bigint;
+    fromParticipantId: string;
+    toParticipantId: string;
     value: boolean;
     markType: string;
   };
@@ -46,23 +46,32 @@ export declare namespace ReputationStorage {
 
 export interface ReputationStorageInterface extends Interface {
   getFunction(
-    nameOrSignature: "getMark" | "getMarksCount" | "marks" | "storeMark"
+    nameOrSignature:
+      | "getMark"
+      | "getMarksCount"
+      | "getMarksCountByType"
+      | "marks"
+      | "storeOrUpdateMark"
   ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "MarkStored"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "MarkStored" | "MarkUpdated"): EventFragment;
 
   encodeFunctionData(
     functionFragment: "getMark",
-    values: [BigNumberish]
+    values: [BytesLike, BytesLike, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "getMarksCount",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "getMarksCountByType",
+    values: [BytesLike]
+  ): string;
   encodeFunctionData(functionFragment: "marks", values: [BigNumberish]): string;
   encodeFunctionData(
-    functionFragment: "storeMark",
-    values: [BigNumberish, BigNumberish, boolean, string]
+    functionFragment: "storeOrUpdateMark",
+    values: [BytesLike, BytesLike, boolean, BytesLike]
   ): string;
 
   decodeFunctionResult(functionFragment: "getMark", data: BytesLike): Result;
@@ -70,30 +79,68 @@ export interface ReputationStorageInterface extends Interface {
     functionFragment: "getMarksCount",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getMarksCountByType",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "marks", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "storeMark", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "storeOrUpdateMark",
+    data: BytesLike
+  ): Result;
 }
 
 export namespace MarkStoredEvent {
   export type InputTuple = [
     sender: AddressLike,
-    fromParticipantId: BigNumberish,
-    toParticipantId: BigNumberish,
+    fromParticipantId: BytesLike,
+    toParticipantId: BytesLike,
     value: boolean,
-    markType: string
+    markType: BytesLike
   ];
   export type OutputTuple = [
     sender: string,
-    fromParticipantId: bigint,
-    toParticipantId: bigint,
+    fromParticipantId: string,
+    toParticipantId: string,
     value: boolean,
     markType: string
   ];
   export interface OutputObject {
     sender: string;
-    fromParticipantId: bigint;
-    toParticipantId: bigint;
+    fromParticipantId: string;
+    toParticipantId: string;
     value: boolean;
+    markType: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace MarkUpdatedEvent {
+  export type InputTuple = [
+    sender: AddressLike,
+    fromParticipantId: BytesLike,
+    toParticipantId: BytesLike,
+    oldValue: boolean,
+    newValue: boolean,
+    markType: BytesLike
+  ];
+  export type OutputTuple = [
+    sender: string,
+    fromParticipantId: string,
+    toParticipantId: string,
+    oldValue: boolean,
+    newValue: boolean,
+    markType: string
+  ];
+  export interface OutputObject {
+    sender: string;
+    fromParticipantId: string;
+    toParticipantId: string;
+    oldValue: boolean;
+    newValue: boolean;
     markType: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -146,19 +193,29 @@ export interface ReputationStorage extends BaseContract {
   ): Promise<this>;
 
   getMark: TypedContractMethod<
-    [index: BigNumberish],
+    [
+      fromParticipantId: BytesLike,
+      toParticipantId: BytesLike,
+      markType: BytesLike
+    ],
     [ReputationStorage.MarkStructOutput],
     "view"
   >;
 
   getMarksCount: TypedContractMethod<[], [bigint], "view">;
 
+  getMarksCountByType: TypedContractMethod<
+    [markType: BytesLike],
+    [bigint],
+    "view"
+  >;
+
   marks: TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, bigint, boolean, string] & {
-        fromParticipantId: bigint;
-        toParticipantId: bigint;
+      [string, string, boolean, string] & {
+        fromParticipantId: string;
+        toParticipantId: string;
         value: boolean;
         markType: string;
       }
@@ -166,12 +223,12 @@ export interface ReputationStorage extends BaseContract {
     "view"
   >;
 
-  storeMark: TypedContractMethod<
+  storeOrUpdateMark: TypedContractMethod<
     [
-      fromParticipantId: BigNumberish,
-      toParticipantId: BigNumberish,
+      fromParticipantId: BytesLike,
+      toParticipantId: BytesLike,
       value: boolean,
-      markType: string
+      markType: BytesLike
     ],
     [void],
     "nonpayable"
@@ -184,7 +241,11 @@ export interface ReputationStorage extends BaseContract {
   getFunction(
     nameOrSignature: "getMark"
   ): TypedContractMethod<
-    [index: BigNumberish],
+    [
+      fromParticipantId: BytesLike,
+      toParticipantId: BytesLike,
+      markType: BytesLike
+    ],
     [ReputationStorage.MarkStructOutput],
     "view"
   >;
@@ -192,13 +253,16 @@ export interface ReputationStorage extends BaseContract {
     nameOrSignature: "getMarksCount"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "getMarksCountByType"
+  ): TypedContractMethod<[markType: BytesLike], [bigint], "view">;
+  getFunction(
     nameOrSignature: "marks"
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, bigint, boolean, string] & {
-        fromParticipantId: bigint;
-        toParticipantId: bigint;
+      [string, string, boolean, string] & {
+        fromParticipantId: string;
+        toParticipantId: string;
         value: boolean;
         markType: string;
       }
@@ -206,13 +270,13 @@ export interface ReputationStorage extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "storeMark"
+    nameOrSignature: "storeOrUpdateMark"
   ): TypedContractMethod<
     [
-      fromParticipantId: BigNumberish,
-      toParticipantId: BigNumberish,
+      fromParticipantId: BytesLike,
+      toParticipantId: BytesLike,
       value: boolean,
-      markType: string
+      markType: BytesLike
     ],
     [void],
     "nonpayable"
@@ -225,9 +289,16 @@ export interface ReputationStorage extends BaseContract {
     MarkStoredEvent.OutputTuple,
     MarkStoredEvent.OutputObject
   >;
+  getEvent(
+    key: "MarkUpdated"
+  ): TypedContractEvent<
+    MarkUpdatedEvent.InputTuple,
+    MarkUpdatedEvent.OutputTuple,
+    MarkUpdatedEvent.OutputObject
+  >;
 
   filters: {
-    "MarkStored(address,uint256,uint256,bool,string)": TypedContractEvent<
+    "MarkStored(address,bytes32,bytes32,bool,bytes32)": TypedContractEvent<
       MarkStoredEvent.InputTuple,
       MarkStoredEvent.OutputTuple,
       MarkStoredEvent.OutputObject
@@ -236,6 +307,17 @@ export interface ReputationStorage extends BaseContract {
       MarkStoredEvent.InputTuple,
       MarkStoredEvent.OutputTuple,
       MarkStoredEvent.OutputObject
+    >;
+
+    "MarkUpdated(address,bytes32,bytes32,bool,bool,bytes32)": TypedContractEvent<
+      MarkUpdatedEvent.InputTuple,
+      MarkUpdatedEvent.OutputTuple,
+      MarkUpdatedEvent.OutputObject
+    >;
+    MarkUpdated: TypedContractEvent<
+      MarkUpdatedEvent.InputTuple,
+      MarkUpdatedEvent.OutputTuple,
+      MarkUpdatedEvent.OutputObject
     >;
   };
 }
