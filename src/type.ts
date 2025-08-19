@@ -17,6 +17,13 @@ export enum OnchainMarkTypeEnum {
   TRUST = "TrustMark",
 }
 
+/**
+ * Другие типы нодов  
+ */
+export enum OtherTypeNodes {
+  CHANGELOG = "Changelog"
+}
+
 export const OffchainMarkTypeMap: Record<number, OffchainMarkTypeEnum | null> = {
   0: null, // UNSPECIFIED
   1: OffchainMarkTypeEnum.RELATION,

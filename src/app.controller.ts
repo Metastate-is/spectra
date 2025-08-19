@@ -8,6 +8,7 @@ import { OnchainService } from "./modules/onchain/onchain.service";
 export class AppController {
   constructor(
     private readonly onchainService: OnchainService,
+    private readonly offchainService: OffchainService,
     private readonly logger: StructuredLoggerService,
   ) {
     this.logger.setContext(AppController.name);
@@ -62,11 +63,18 @@ export class AppController {
     
     // //
 
-    await this.onchainService.process({
-      fromParticipantId: "user2",
+    await this.offchainService.process({
+      fromParticipantId: "user222",
       toParticipantId: "user3",
-      markType: OnchainMarkTypeEnum.TRUST,
+      markType: OffchainMarkTypeEnum.RELATION,
       value: true,
+    });
+
+    await this.offchainService.process({
+      fromParticipantId: "user222",
+      toParticipantId: "user3",
+      markType: OffchainMarkTypeEnum.RELATION,
+      value: false,
     });
 
     // await this.offchainService.process({

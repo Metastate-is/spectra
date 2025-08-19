@@ -4,6 +4,7 @@ import { IOnchainMark } from "src/core/iterface/onchain.interface";
 import { KafkaService } from "src/core/kafka/kafka.service";
 import {
   BaseMarkService,
+  IGetReputationChangelogResponse,
   IGetReputationContextResponse,
   IGetReputationCountResponse,
 } from "src/core/mark/base-marks.service";
@@ -173,5 +174,11 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     mark: Omit<IOnchainMark, "value">,
   ): Promise<IGetReputationCountResponse> {
     return await super.getReputationCount(mark as IOnchainMark);
+  }
+
+  async getReputationChangelog(
+    mark: Omit<IOnchainMark, "value">,
+  ): Promise<IGetReputationChangelogResponse[]> {
+    return await super.getReputationChangelog(mark as IOnchainMark);
   }
 }

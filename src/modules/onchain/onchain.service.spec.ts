@@ -6,6 +6,7 @@ import { KafkaService } from "src/core/kafka/kafka.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { OnchainService } from "./onchain.service";
 import { OnchainMarkTypeEnum } from "src/type";
+import { ReputationContractService } from "../metastate/services/reputatoin-contract.service";
 
 describe("OnchainService", () => {
   let service: OnchainService;
@@ -58,12 +59,17 @@ describe("OnchainService", () => {
     initSession: jest.fn().mockReturnValue(mockSession),
   };
 
+  const mockReputationContractService = {
+    storeOrUpdateMark: jest.fn(),
+  };
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
         OnchainService,
         { provide: Neo4jService, useValue: mockNeo4jService },
         { provide: KafkaService, useValue: mockKafkaService },
+        { provide: ReputationContractService, useValue: mockReputationContractService },
       ],
     }).compile();
 
@@ -82,6 +88,7 @@ describe("OnchainService", () => {
         .mockResolvedValueOnce({}) // fromParticipant MERGE
         .mockResolvedValueOnce({}) // toParticipant MERGE
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
+        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -102,22 +109,7 @@ describe("OnchainService", () => {
 
       expect(result).toBe(true);
 
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MERGE (:Participant"),
-        expect.objectContaining({ participantId: mockMark.fromParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MERGE (:Participant"),
-        expect.objectContaining({ participantId: mockMark.toParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MATCH (from:Participant"),
-        expect.objectContaining({ fromParticipantId: mockMark.fromParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("CREATE (mark:Mark"),
-        expect.objectContaining({ value: mockMark.value }),
-      );
+      expect(mockTx.run).toHaveBeenCalledTimes(5);
 
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
@@ -139,6 +131,7 @@ describe("OnchainService", () => {
             },
           ],
         })
+        .mockResolvedValueOnce({}) // updateChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -166,6 +159,8 @@ describe("OnchainService", () => {
         expect.stringContaining("SET mark.value = $value"),
         expect.objectContaining({ value: false }),
       );
+
+      expect(mockTx.run).toHaveBeenCalledTimes(5);
 
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();

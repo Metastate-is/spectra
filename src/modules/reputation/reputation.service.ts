@@ -15,6 +15,7 @@ import { isBoolean } from "src/utils/boolean";
 import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
 import { OffchainService } from "../offchain/offchain.service";
 import { OnchainService } from "../onchain/onchain.service";
+import { GetReputationChangelogRequest, GetReputationChangelogResponse } from "@metastate-is/proto-models/generated/metastate/grpc/spectra/v1/reputation_changelog";
 
 @Controller()
 export class ReputationController {
@@ -174,6 +175,82 @@ export class ReputationController {
         positiveCount: result.positive,
         negativeCount: result.negative,
         commonCount: result.commonCount,
+      };
+    } catch (e) {
+      this.l.error("GetReputationCount", e as Error);
+      throw e;
+    } finally {
+      this.l.debug("Finished processing reputation count", { meta: { data } });
+      this.l.endTrace();
+    }
+  }
+
+  @GrpcMethod("ReputationChangelogService", "GetReputationChangelog")
+  async getReputationChangelog(data: GetReputationChangelogRequest): Promise<GetReputationChangelogResponse> {
+    this.l.startTrace();
+
+    try {
+      this.l.info("GetReputationChangelog", { meta: { data } });
+
+      if (!data.fromParticipantId || !data.toParticipantId) {
+        this.l.warn("Unknown participant id", { meta: { data } });
+        throw new Error("Unknown participant id");
+      }
+
+      if (data.isOnchain) {
+        if (data.onchainMarkType && !isValidOnchainMarkType(data.onchainMarkType)) {
+          this.l.warn("Unknown onchain mark type", { meta: { data } });
+          throw new Error("Unknown onchain mark type");
+        }
+
+        this.l.log("Processing onchain reputation count", {
+          meta: {
+            data,
+          },
+        });
+
+        const result = await this.onchainService.getReputationChangelog({
+          fromParticipantId: data.fromParticipantId,
+          toParticipantId: data.toParticipantId,
+          markType: OnchainMarkTypeMap[data.onchainMarkType as keyof typeof OnchainMarkTypeMap]!,
+        });
+
+        this.l.log("Reputation count onchain result", {
+          meta: {
+            result,
+          },
+        });
+
+        return {
+          changes: result,
+        };
+      }
+
+      if (data.offchainMarkType && !isValidOffchainMarkType(data.offchainMarkType)) {
+        this.l.warn("Unknown offchain mark type", { meta: { data } });
+        throw new Error("Unknown offchain mark type");
+      }
+
+      this.l.log("Processing offchain reputation count", {
+        meta: {
+          data,
+        },
+      });
+
+      const result = await this.offchainService.getReputationChangelog({
+        fromParticipantId: data.fromParticipantId,
+        toParticipantId: data.toParticipantId,
+        markType: OffchainMarkTypeMap[data.offchainMarkType as keyof typeof OffchainMarkTypeMap]!,
+      });
+
+      this.l.log("Reputation count offchain result", {
+        meta: {
+          result,
+        },
+      });
+
+      return {
+        changes: result,
       };
     } catch (e) {
       this.l.error("GetReputationCount", e as Error);

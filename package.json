@@ -29,7 +29,7 @@
 		"@biomejs/biome": "^1.5.3",
 		"@ethersproject/strings": "^5.8.0",
 		"@grpc/reflection": "^1.0.4",
-		"@metastate-is/proto-models": "^1.27.0",
+		"@metastate-is/proto-models": "^1.28.0",
 		"@nestjs/cache-manager": "^3.0.1",
 		"@nestjs/common": "^11.1.3",
 		"@nestjs/config": "^4.0.2",

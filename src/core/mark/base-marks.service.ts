@@ -74,6 +74,12 @@ export interface IGetReputationCountResponse {
   commonCount: number;
 }
 
+export interface IGetReputationChangelogResponse {
+  updatedAt: string;
+  value: boolean;
+  participantId: string;
+}
+
 export abstract class BaseMarkService<TMark extends IBaseMark> {
   protected abstract readonly onchain: boolean;
   protected readonly logger = new StructuredLoggerService();
@@ -104,6 +110,16 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
       await this.createParticipantIfNotExists(mark.toParticipantId, tx);
 
       const existing = await this.findOne(mark, tx);
+      
+      // Пишем Changelog в любом случае
+      await tx.run(this.getReputationChangelogQuery(), {
+        fromId: mark.fromParticipantId,
+        toId: mark.toParticipantId,
+        value: mark.value,
+        markType: mark.markType,
+        onchain: this.onchain,
+      });
+      
       if (existing) {
         upsertedMark = await this.update(mark, tx);
         await tx.commit();
@@ -365,6 +381,64 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     } catch (e) {
       this.logger.error("Failed to get reputation count", e);
       return { positive: 0, negative: 0, commonCount: 0 };
+    }
+  }
+
+  /**
+   * Пишем Changelog для любой операции
+   * @param mark 
+   * @returns 
+   */
+  private getReputationChangelogQuery(): string {
+    return cypher /* cypher */`
+      MATCH (from:Participant {participantId: $fromId})
+      MATCH (to:Participant {participantId: $toId})
+      MATCH (type:MarkType {name: $markType, onchain: $onchain})
+
+      CREATE (cl:Changelog {
+        id: randomUUID(),
+        value: $value,
+        createdAt: datetime()
+      })
+      MERGE (from)-[:MADE_CHANGELOG]->(cl)
+      MERGE (cl)-[:APPLIES_TO]->(to)
+      MERGE (cl)-[:OF_TYPE]->(type)
+    `;
+  }
+
+  /**
+   * Возвращаем Историю оставленную пользователем From пользователю To
+   * @param mark 
+   * @returns 
+   */
+  protected async getReputationChangelog(mark: TMark): Promise<IGetReputationChangelogResponse[]> {
+    try {
+      const query = cypher /* cypher */`
+        MATCH (from:Participant {participantId: $userA})
+              -[:MADE_CHANGELOG]->(cl:Changelog)
+              -[:APPLIES_TO]->(to:Participant {participantId: $userB})
+              -[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
+        RETURN cl.createdAt as createdAt,
+               cl.value as value,
+               from.participantId as participantId
+        ORDER BY cl.createdAt ASC
+      `;
+  
+      const result = await this.neo4jService.runQuery(query, {
+        userA: mark.fromParticipantId,
+        userB: mark.toParticipantId,
+        onchain: this.onchain,
+        markType: mark.markType,
+      });
+  
+      return result.records.map((r) => ({
+        updatedAt: r.get("createdAt").toString(),
+        value: r.get("value"),
+        participantId: r.get("participantId"),
+      }));
+    } catch (e) {
+      this.logger.error("Failed to get reputation changelog", e);
+      return [];
     }
   }
 }

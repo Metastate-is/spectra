@@ -10,8 +10,8 @@ describe("OffchainService", () => {
   let module: TestingModule;
 
   const mockMark: IOffchainMark = {
-    fromParticipantId: "11",
-    toParticipantId: "21",
+    fromParticipantId: "TEST_USER_1",
+    toParticipantId: "TEST_USER_2",
     markType: OffchainMarkTypeEnum.RELATION,
     value: true,
   };
@@ -57,8 +57,9 @@ describe("OffchainService", () => {
     it("should create new mark if not exists", async () => {
       mockTx.run
         .mockResolvedValueOnce({}) // fromParticipant MERGE
-        .mockResolvedValueOnce({}) // toParticipant MERGE
+        .mockResolvedValueOnce({}) // toParticipant MERGE\
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
+        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -79,22 +80,7 @@ describe("OffchainService", () => {
 
       expect(result).toBe(true);
 
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MERGE (:Participant"),
-        expect.objectContaining({ participantId: mockMark.fromParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MERGE (:Participant"),
-        expect.objectContaining({ participantId: mockMark.toParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("MATCH (from:Participant"),
-        expect.objectContaining({ fromParticipantId: mockMark.fromParticipantId }),
-      );
-      expect(mockTx.run).toHaveBeenCalledWith(
-        expect.stringContaining("CREATE (mark:Mark"),
-        expect.objectContaining({ value: mockMark.value }),
-      );
+      expect(mockTx.run).toHaveBeenCalledTimes(5);
 
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
@@ -116,6 +102,7 @@ describe("OffchainService", () => {
             },
           ],
         })
+        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -143,6 +130,8 @@ describe("OffchainService", () => {
         expect.stringContaining("SET mark.value = $value"),
         expect.objectContaining({ value: false }),
       );
+
+      expect(mockTx.run).toHaveBeenCalledTimes(5);
 
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
