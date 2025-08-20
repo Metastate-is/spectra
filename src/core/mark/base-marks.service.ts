@@ -406,21 +406,46 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     `;
   }
 
-  /**
-   * Возвращаем Историю оставленную пользователем From пользователю To
-   * @param mark 
-   * @returns 
-   */
+   /**
+     * Извлекает историю изменения "репутации" (changelog) между двумя участниками.
+     *
+     * Логика:
+     * - Ищем все узлы `Changelog`, созданные пользователем `from` (MADE_CHANGELOG).
+     * - Проверяем, что эти изменения относятся к пользователю `to` (APPLIES_TO).
+     * - Ограничиваем только теми `Changelog`, которые связаны с конкретным типом оценки (`MarkType`).
+     * - Возвращаем список изменений в порядке возрастания времени.
+     *
+     * Cypher-запрос:
+     * ```cypher
+     * MATCH (from:Participant {participantId: $userA})-[:MADE_CHANGELOG]->(cl:Changelog)
+     * MATCH (cl)-[:APPLIES_TO]->(to:Participant {participantId: $userB})
+     * MATCH (cl)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
+     * RETURN cl.createdAt AS createdAt,
+     *        cl.value AS value,
+     *        from.participantId AS participantId,
+     *        type.onchain AS onchain
+     * ORDER BY cl.createdAt ASC
+     * ```
+     *
+     * @param mark Объект `TMark`, содержащий информацию о:
+     *  - `fromParticipantId` — кто оставил метку
+     *  - `toParticipantId` — кому она оставлена
+     *  - `markType` — тип метки (например, "RelationMark", "TrustMark")
+     * @returns Массив объектов с историей изменений:
+     *  - `updatedAt` — время создания изменения
+     *  - `value` — значение (true/false или др.)
+     *  - `participantId` — идентификатор того, кто оставил изменение
+  */
   protected async getReputationChangelog(mark: TMark): Promise<IGetReputationChangelogResponse[]> {
     try {
       const query = cypher /* cypher */`
-        MATCH (from:Participant {participantId: $userA})
-              -[:MADE_CHANGELOG]->(cl:Changelog)
-              -[:APPLIES_TO]->(to:Participant {participantId: $userB})
-              -[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
-        RETURN cl.createdAt as createdAt,
-               cl.value as value,
-               from.participantId as participantId
+        MATCH (from:Participant {participantId: $userA})-[:MADE_CHANGELOG]->(cl:Changelog)
+        MATCH (cl)-[:APPLIES_TO]->(to:Participant {participantId: $userB})
+        MATCH (cl)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
+        RETURN cl.createdAt AS createdAt,
+          cl.value AS value,
+          from.participantId AS participantId,
+          type.onchain AS onchain
         ORDER BY cl.createdAt ASC
       `;
   
@@ -430,6 +455,8 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
         onchain: this.onchain,
         markType: mark.markType,
       });
+
+      console.log("result", result);
   
       return result.records.map((r) => ({
         updatedAt: r.get("createdAt").toString(),

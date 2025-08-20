@@ -38,7 +38,7 @@ export class InitNeo4jCommand extends CommandRunner {
       const types = [
         ...Object.values(OnchainMarkTypeEnum).map((name) => ({ name, onchain: true })),
         ...Object.values(OffchainMarkTypeEnum).map((name) => ({ name, onchain: false })),
-        ...Object.values(OtherTypeNodes).map((name) => ({ name })),
+        ...Object.values(OtherTypeNodes).map(() => ({})),
       ];
 
       for (const type of types) {
@@ -54,7 +54,7 @@ export class InitNeo4jCommand extends CommandRunner {
 
         await tx.run(
           cypher /* cypher */`
-            MERGE (:MarkType {name: $name})
+            MERGE (:MarkType)
           `,
           type,
         );
