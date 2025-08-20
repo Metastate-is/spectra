@@ -203,7 +203,7 @@ export class ReputationController {
           throw new Error("Unknown onchain mark type");
         }
 
-        this.l.log("Processing onchain reputation count", {
+        this.l.log("Processing onchain reputation changelog", {
           meta: {
             data,
           },
@@ -215,7 +215,7 @@ export class ReputationController {
           markType: OnchainMarkTypeMap[data.onchainMarkType as keyof typeof OnchainMarkTypeMap]!,
         });
 
-        this.l.log("Reputation count onchain result", {
+        this.l.log("Reputation changelog onchain result", {
           meta: {
             result,
           },
@@ -231,7 +231,7 @@ export class ReputationController {
         throw new Error("Unknown offchain mark type");
       }
 
-      this.l.log("Processing offchain reputation count", {
+      this.l.log("Processing offchain reputation changelog", {
         meta: {
           data,
         },
@@ -243,7 +243,7 @@ export class ReputationController {
         markType: OffchainMarkTypeMap[data.offchainMarkType as keyof typeof OffchainMarkTypeMap]!,
       });
 
-      this.l.log("Reputation count offchain result", {
+      this.l.log("Reputation changelog offchain result", {
         meta: {
           result,
         },
@@ -253,10 +253,10 @@ export class ReputationController {
         changes: result,
       };
     } catch (e) {
-      this.l.error("GetReputationCount", e as Error);
+      this.l.error("GetReputationChangelog", e as Error);
       throw e;
     } finally {
-      this.l.debug("Finished processing reputation count", { meta: { data } });
+      this.l.debug("Finished processing reputation changelog", { meta: { data } });
       this.l.endTrace();
     }
   }
