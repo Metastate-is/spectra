@@ -3,7 +3,6 @@ import { CommandFactory } from "nest-commander";
 import { CliModule } from "./cli/cli.module";
 
 async function bootstrap(): Promise<void> {
-  // Настраиваем уровень логирования
   const logLevels: LogLevel[] = ["error", "warn", "log"];
 
   await CommandFactory.run(CliModule, {
