@@ -11,7 +11,6 @@ interface ExtendedError extends Error {
 async function bootstrap(): Promise<void> {
   const l = new StructuredLoggerService();
   l.setContext("Bootstrap");
-
   l.startTrace();
   l.info("Starting application");
 
