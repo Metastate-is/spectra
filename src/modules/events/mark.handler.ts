@@ -127,7 +127,7 @@ export class MarkHandler {
       }
     } catch (e) {
       this.logger.error("Error processing mark event", e as Error);
-      throw new Error(e);
+      throw e;
     }
   }
 

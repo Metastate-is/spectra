@@ -35,7 +35,6 @@ export class ReputationController {
     this.l.startTrace();
     try {
       this.l.info("GetReputationContext", { meta: { data } });
-      console.log("TData: ", data);
 
       if (!data.fromParticipantId || !data.toParticipantId) {
         this.l.warn("Unknown participant id", { meta: { data } });

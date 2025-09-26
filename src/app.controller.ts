@@ -54,64 +54,20 @@ export class AppController {
      * negative: Количество отрицательных оценок только от общих нод к user2
      * commonCount: Количество общих нод
      */
+   
     // await this.offchainService.process({
-    //   fromParticipantId: "user1",
-    //   toParticipantId: "user2",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
+    //   fromParticipantId: "32WP0sphcvvuefb39uaX8fGV9iA",
+    //   toParticipantId: "32WkiCSpGrFxW9YW4FJvjmSf0s3",
+    //   markType: OffchainMarkTypeEnum.RELATION,
     //   value: true,
     // });
-    
-    // //
 
-    await this.offchainService.process({
+    await this.onchainService.process({
       fromParticipantId: "32WP0sphcvvuefb39uaX8fGV9iA",
       toParticipantId: "32WkiCSpGrFxW9YW4FJvjmSf0s3",
-      markType: OffchainMarkTypeEnum.RELATION,
+      markType: OnchainMarkTypeEnum.TRUST,
       value: true,
     });
-
-    // await this.offchainService.process({
-    //   fromParticipantId: "user222",
-    //   toParticipantId: "user3",
-    //   markType: OffchainMarkTypeEnum.RELATION,
-    //   value: false,
-    // });
-
-    // await this.offchainService.process({
-    //   fromParticipantId: "user1",
-    //   toParticipantId: "user4",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
-
-    // // 
-    // await this.offchainService.process({
-    //   fromParticipantId: "user5",
-    //   toParticipantId: "user1",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
-    // await this.offchainService.process({
-    //   fromParticipantId: "user5",
-    //   toParticipantId: "user2",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
-
-    // //
-    // await this.offchainService.process({
-    //   fromParticipantId: "user1",
-    //   toParticipantId: "user6",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
-    // await this.offchainService.process({
-    //   fromParticipantId: "user2",
-    //   toParticipantId: "user6",
-    //   markType: OffchainMarkTypeEnum.BUSINESS_FEEDBACK,
-    //   value: true,
-    // });
-
 
   }
 }
