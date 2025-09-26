@@ -9,6 +9,5 @@ async function bootstrap(): Promise<void> {
     logger: logLevels,
   });
 }
-
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
