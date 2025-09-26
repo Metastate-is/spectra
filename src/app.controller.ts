@@ -64,18 +64,18 @@ export class AppController {
     // //
 
     await this.offchainService.process({
-      fromParticipantId: "user222",
-      toParticipantId: "user3",
+      fromParticipantId: "32WP0sphcvvuefb39uaX8fGV9iA",
+      toParticipantId: "32WkiCSpGrFxW9YW4FJvjmSf0s3",
       markType: OffchainMarkTypeEnum.RELATION,
       value: true,
     });
 
-    await this.offchainService.process({
-      fromParticipantId: "user222",
-      toParticipantId: "user3",
-      markType: OffchainMarkTypeEnum.RELATION,
-      value: false,
-    });
+    // await this.offchainService.process({
+    //   fromParticipantId: "user222",
+    //   toParticipantId: "user3",
+    //   markType: OffchainMarkTypeEnum.RELATION,
+    //   value: false,
+    // });
 
     // await this.offchainService.process({
     //   fromParticipantId: "user1",

@@ -108,10 +108,16 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     try {
       await this.createParticipantIfNotExists(mark.fromParticipantId, tx);
       await this.createParticipantIfNotExists(mark.toParticipantId, tx);
-
+    
       const existing = await this.findOne(mark, tx);
-      
-      // Пишем Changelog в любом случае
+    
+      if (existing) {
+        upsertedMark = await this.update(mark, tx);
+      } else {
+        upsertedMark = await this.create(mark, tx);
+      }
+    
+      // Пишем Changelog после создания или обновления
       await tx.run(this.getReputationChangelogQuery(), {
         fromId: mark.fromParticipantId,
         toId: mark.toParticipantId,
@@ -119,27 +125,20 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
         markType: mark.markType,
         onchain: this.onchain,
       });
-      
-      if (existing) {
-        upsertedMark = await this.update(mark, tx);
-        await tx.commit();
-      } else {
-        upsertedMark = await this.create(mark, tx);
-        await tx.commit();
-      }
+    
+      await tx.commit();
       await this.sendEventCreateMark(upsertedMark);
-
+    
       return true;
     } catch (e) {
       this.logger.error("Error creating/updating mark", e);
       await tx.rollback();
-
       await this.sendEventCreateMark(mark, e);
-
       return false;
     } finally {
       await session.close();
     }
+    
   }
 
   /**

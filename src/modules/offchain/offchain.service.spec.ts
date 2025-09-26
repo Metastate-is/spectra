@@ -57,9 +57,8 @@ describe("OffchainService", () => {
     it("should create new mark if not exists", async () => {
       mockTx.run
         .mockResolvedValueOnce({}) // fromParticipant MERGE
-        .mockResolvedValueOnce({}) // toParticipant MERGE\
+        .mockResolvedValueOnce({}) // toParticipant MERGE
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
-        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -74,21 +73,35 @@ describe("OffchainService", () => {
               has: (key: string) => key === "mark",
             },
           ],
-        }); // create mark
-
+        }) // create mark
+        .mockResolvedValueOnce({}); // createChangelog
+    
       const result = await service.process(mockMark);
-
+    
       expect(result).toBe(true);
-
+    
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-
+    
+      // Проверяем, что Changelog создаётся после create
+      expect(mockTx.run).toHaveBeenNthCalledWith(
+        5,
+        expect.stringContaining("CREATE (cl:Changelog"),
+        expect.objectContaining({
+          fromId: mockMark.fromParticipantId,
+          toId: mockMark.toParticipantId,
+          value: mockMark.value,
+          markType: mockMark.markType,
+        }),
+      );
+    
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
+    
 
     it("should update mark if already exists", async () => {
       const existingMark = { id: "some-id", value: true };
-
+    
       mockTx.run
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (from)
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (to)
@@ -96,13 +109,11 @@ describe("OffchainService", () => {
           // findOne возвращает существующую метку
           records: [
             {
-              get: () => ({
-                properties: existingMark,
-              }),
+              get: () => ({ properties: existingMark }),
+              has: () => true,
             },
           ],
         })
-        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -114,28 +125,28 @@ describe("OffchainService", () => {
                   updatedAt: "2025-07-09T09:00:00Z",
                 },
               }),
-              has: (key: string) => key === "mark",
+              has: () => true,
             },
           ],
-        }); // update
-
+        }) // update mark
+        .mockResolvedValueOnce({}); // createChangelog
+    
       const markToUpdate = { ...mockMark, value: false };
-
       const result = await service.process(markToUpdate);
-
+    
       expect(result).toBe(true);
-
-      // Проверяем, что обновление произошло с нужным значением
+    
       expect(mockTx.run).toHaveBeenCalledWith(
         expect.stringContaining("SET mark.value = $value"),
         expect.objectContaining({ value: false }),
       );
-
+    
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-
+    
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
+    
 
     it("should rollback if error thrown", async () => {
       mockTx.run.mockImplementationOnce(() => {

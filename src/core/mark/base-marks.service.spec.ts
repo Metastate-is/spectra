@@ -92,20 +92,41 @@ describe("BaseMarkService", () => {
       .mockResolvedValueOnce({}) // createParticipantIfNotExists (from)
       .mockResolvedValueOnce({}) // createParticipantIfNotExists (to)
       .mockResolvedValueOnce({ records: [] }) // findOne - не найдено
-      .mockResolvedValueOnce({}); // create
-
+      .mockResolvedValueOnce({}) // create
+      .mockResolvedValueOnce({}); // Changelog
+  
     const result = await service.processMark(mockMark);
-
+  
     expect(result).toBe(true);
-
-    expect(mockTx.run).toHaveBeenCalledWith(
+  
+    // Проверяем создание участников
+    expect(mockTx.run).toHaveBeenNthCalledWith(
+      1,
       expect.stringContaining("MERGE (:Participant {participantId: $participantId})"),
-      expect.any(Object),
+      { participantId: mockMark.fromParticipantId },
     );
-
+    expect(mockTx.run).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("MERGE (:Participant {participantId: $participantId})"),
+      { participantId: mockMark.toParticipantId },
+    );
+  
+    // Проверяем, что Changelog создаётся после create
+    expect(mockTx.run).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining("CREATE (cl:Changelog"),
+      expect.objectContaining({
+        fromId: mockMark.fromParticipantId,
+        toId: mockMark.toParticipantId,
+        value: mockMark.value,
+        markType: mockMark.markType,
+      }),
+    );
+  
     expect(mockTx.commit).toHaveBeenCalled();
     expect(mockSession.close).toHaveBeenCalled();
   });
+  
 
   it("should update mark if exists", async () => {
     const existingMark = { id: "existing-id", value: 5 };

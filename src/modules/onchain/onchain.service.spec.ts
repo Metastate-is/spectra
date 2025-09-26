@@ -88,7 +88,6 @@ describe("OnchainService", () => {
         .mockResolvedValueOnce({}) // fromParticipant MERGE
         .mockResolvedValueOnce({}) // toParticipant MERGE
         .mockResolvedValueOnce({ records: [] }) // findOne — нет марка
-        .mockResolvedValueOnce({}) // createChangelog
         .mockResolvedValueOnce({
           records: [
             {
@@ -103,35 +102,45 @@ describe("OnchainService", () => {
               has: (key: string) => key === "mark",
             },
           ],
-        }); // create mark
-
+        }) // create mark
+        .mockResolvedValueOnce({}); // create Changelog
+    
       const result = await service.process(mockMark);
-
+    
       expect(result).toBe(true);
-
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-
+    
+      // Проверяем, что Changelog создаётся после create
+      expect(mockTx.run).toHaveBeenNthCalledWith(
+        5,
+        expect.stringContaining("CREATE (cl:Changelog"),
+        expect.objectContaining({
+          fromId: mockMark.fromParticipantId,
+          toId: mockMark.toParticipantId,
+          value: mockMark.value,
+          markType: mockMark.markType,
+        }),
+      );
+    
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
+    
 
     it("should update mark if already exists", async () => {
       const existingMark = { id: "some-id", value: true };
-
+    
       mockTx.run
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (from)
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (to)
         .mockResolvedValueOnce({
-          // findOne возвращает существующую метку
           records: [
             {
-              get: () => ({
-                properties: existingMark,
-              }),
+              get: () => ({ properties: existingMark }),
+              has: () => true,
             },
           ],
-        })
-        .mockResolvedValueOnce({}) // updateChangelog
+        }) // findOne возвращает существующую метку
         .mockResolvedValueOnce({
           records: [
             {
@@ -143,28 +152,40 @@ describe("OnchainService", () => {
                   updatedAt: "2025-07-09T09:00:00Z",
                 },
               }),
-              has: (key: string) => key === "mark",
+              has: () => true,
             },
           ],
-        }); // update
-
+        }) // update mark
+        .mockResolvedValueOnce({}); // create Changelog
+    
       const markToUpdate = { ...mockMark, value: false };
-
       const result = await service.process(markToUpdate);
-
+    
       expect(result).toBe(true);
-
-      // Проверяем, что обновление произошло с нужным значением
+    
       expect(mockTx.run).toHaveBeenCalledWith(
         expect.stringContaining("SET mark.value = $value"),
         expect.objectContaining({ value: false }),
       );
-
+    
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-
+    
+      // Проверяем, что Changelog создаётся после update
+      expect(mockTx.run).toHaveBeenNthCalledWith(
+        5,
+        expect.stringContaining("CREATE (cl:Changelog"),
+        expect.objectContaining({
+          fromId: markToUpdate.fromParticipantId,
+          toId: markToUpdate.toParticipantId,
+          value: markToUpdate.value,
+          markType: markToUpdate.markType,
+        }),
+      );
+    
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
+    
 
     it("should rollback if error thrown", async () => {
       mockTx.run.mockImplementationOnce(() => {
