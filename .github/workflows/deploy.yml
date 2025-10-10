@@ -5,8 +5,8 @@ name: 'Build and Deploy (or Rollback) to GKE'
 
 on:
   push:
-    branches: [ main, canary, UH ]        # добавил UH-ветку
-    tags:     [ 'v*.*.*' ]                 # semver → prod
+    branches: [ main, canary, UH, ORABORO, BC ]     # добавлены новые ветки
+    tags:     [ 'v*.*.*' ]                          # semver → prod
   workflow_dispatch:
     inputs:
       # --- build / deploy ---
@@ -31,16 +31,14 @@ env:
   TAG_NAME:         ${{ startsWith(github.ref,'refs/tags/') && github.ref_name || '' }}
   DEPLOY_NAMESPACE: ${{ startsWith(github.ref,'refs/tags/') && 'metaapp-prod' || format('metaapp-{0}', github.ref_name) }}
 
-  # build args
   TOKEN_GITHUB:  ${{ secrets.TOKEN_GITHUB }}
   NPMRC_TOKEN:   ${{ secrets.NPMRC_TOKEN }}
 
-  # дефолтные паблик-переменные (будут переопределены ниже по namespace при необходимости)
+  # дефолтные паблик-переменные (будут переопределены ниже по namespace)
   NEXT_PUBLIC_BOT_TOKEN:     ${{ secrets.NEXT_PUBLIC_BOT_TOKEN }}
   NEXT_PUBLIC_GRAPHQL_URL:   ${{ secrets.NEXT_PUBLIC_GRAPHQL_URL }}
   NEXT_PUBLIC_BOT_USERNAME:  ${{ secrets.NEXT_PUBLIC_BOT_USERNAME }}
-  RPC_PRIVATE_KEY:  ${{ secrets.RPC_PRIVATE_KEY }}
-
+  RPC_PRIVATE_KEY:           ${{ secrets.RPC_PRIVATE_KEY }}
 
 permissions:
   id-token: write
@@ -57,7 +55,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # checkout + diff -------------------------------------------------
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
@@ -75,14 +72,14 @@ jobs:
           echo "FORCE=${{ github.event.inputs.force_build }}"            >> $GITHUB_ENV
           echo "IS_TAG=${{ startsWith(github.ref,'refs/tags/') }}"       >> $GITHUB_ENV
 
-      # normalize ns (lowercase) ---------------------------------------
+      # normalize ns ---------------------------------------------------
       - name: Normalize namespace (lowercase)
         run: |
           NS_LOWER="$(echo "${DEPLOY_NAMESPACE}" | tr '[:upper:]' '[:lower:]')"
           echo "DEPLOY_NAMESPACE=${NS_LOWER}" >> $GITHUB_ENV
           echo "Using DEPLOY_NAMESPACE=${NS_LOWER}"
 
-      # select env vars by namespace (UH / prod / default) -------------
+      # select env vars by namespace -----------------------------------
       - name: Select env vars by namespace
         run: |
           if [[ "$DEPLOY_NAMESPACE" == "metaapp-uh" ]]; then
@@ -90,6 +87,19 @@ jobs:
             echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.UH_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_BOT_USERNAME=${{ secrets.UH_NEXT_PUBLIC_BOT_USERNAME }}" >> $GITHUB_ENV
             echo "RPC_PRIVATE_KEY=${{ secrets.UH_RPC_PRIVATE_KEY }}" >> $GITHUB_ENV
+
+          elif [[ "$DEPLOY_NAMESPACE" == "metaapp-oraboro" ]]; then
+            echo "NEXT_PUBLIC_BOT_TOKEN=${{ secrets.ORABORO_NEXT_PUBLIC_BOT_TOKEN }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.ORABORO_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_BOT_USERNAME=${{ secrets.ORABORO_NEXT_PUBLIC_BOT_USERNAME }}" >> $GITHUB_ENV
+            echo "RPC_PRIVATE_KEY=${{ secrets.ORABORO_RPC_PRIVATE_KEY }}" >> $GITHUB_ENV
+
+          elif [[ "$DEPLOY_NAMESPACE" == "metaapp-bc" ]]; then
+            echo "NEXT_PUBLIC_BOT_TOKEN=${{ secrets.BC_NEXT_PUBLIC_BOT_TOKEN }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.BC_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_BOT_USERNAME=${{ secrets.BC_NEXT_PUBLIC_BOT_USERNAME }}" >> $GITHUB_ENV
+            echo "RPC_PRIVATE_KEY=${{ secrets.BC_RPC_PRIVATE_KEY }}" >> $GITHUB_ENV
+
           elif [[ "$DEPLOY_NAMESPACE" == "metaapp-prod" ]]; then
             echo "NEXT_PUBLIC_BOT_TOKEN=${{ secrets.PROD_NEXT_PUBLIC_BOT_TOKEN }}" >> $GITHUB_ENV
             echo "NEXT_PUBLIC_GRAPHQL_URL=${{ secrets.PROD_NEXT_PUBLIC_GRAPHQL_URL }}" >> $GITHUB_ENV
@@ -155,7 +165,6 @@ jobs:
       - name: Set release
         run: echo "RELEASE=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
 
-      # vault suffix ----------------------------------------------------
       - name: Vault suffix
         run: |
           [[ "$DEPLOY_NAMESPACE" == "metaapp-prod" ]] \
@@ -163,18 +172,18 @@ jobs:
             || echo "VAULT_SUFFIX=config" \
             >> $GITHUB_ENV
 
-      # values override -------------------------------------------------
       - name: Helm values override
         run: |
           echo "VALUES_FILE=./helm/values.yaml" >> $GITHUB_ENV
           case "$DEPLOY_NAMESPACE" in
-            metaapp-prod) echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"     >> $GITHUB_ENV ;;
-            metaapp-main) echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml"  >> $GITHUB_ENV ;;
-            metaapp-uh)   echo "VALUES_OVERRIDE=-f ./helm/values-uh.yaml"       >> $GITHUB_ENV ;;
-            *)            echo "VALUES_OVERRIDE="                                >> $GITHUB_ENV ;;
+            metaapp-prod)    echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"     >> $GITHUB_ENV ;;
+            metaapp-main)    echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml"  >> $GITHUB_ENV ;;
+            metaapp-uh)      echo "VALUES_OVERRIDE=-f ./helm/values-uh.yaml"       >> $GITHUB_ENV ;;
+            metaapp-oraboro) echo "VALUES_OVERRIDE=-f ./helm/values-oraboro.yaml"  >> $GITHUB_ENV ;;
+            metaapp-bc)      echo "VALUES_OVERRIDE=-f ./helm/values-bc.yaml"       >> $GITHUB_ENV ;;
+            *)               echo "VALUES_OVERRIDE="                               >> $GITHUB_ENV ;;
           esac
 
-      # helm upgrade ----------------------------------------------------
       - name: Helm upgrade
         if: >-
           ${{ env.CHANGES == 'true' || env.USE_MANUAL == 'true' ||
@@ -221,13 +230,11 @@ jobs:
           else
             BR=${GITHUB_REF#refs/heads/}; NS=metaapp-${BR//\//-}
           fi
-          # normalize to lowercase
           NS="$(echo "$NS" | tr '[:upper:]' '[:lower:]')"
           echo "RELEASE=$RELEASE" >> $GITHUB_ENV
           echo "NS=$NS"           >> $GITHUB_ENV
           echo "Using NS=$NS"
 
-      # vault suffix + values override ---------------------------------
       - name: Vault suffix
         run: |
           [[ "$NS" == "metaapp-prod" ]] \
@@ -239,13 +246,14 @@ jobs:
         run: |
           echo "VALUES_FILE=./helm/values.yaml" >> $GITHUB_ENV
           case "$NS" in
-            metaapp-prod) echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"     >> $GITHUB_ENV ;;
-            metaapp-main) echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml"  >> $GITHUB_ENV ;;
-            metaapp-uh)   echo "VALUES_OVERRIDE=-f ./helm/values-uh.yaml"       >> $GITHUB_ENV ;;
-            *)            echo "VALUES_OVERRIDE="                                >> $GITHUB_ENV ;;
+            metaapp-prod)    echo "VALUES_OVERRIDE=-f ./helm/values-prod.yaml"     >> $GITHUB_ENV ;;
+            metaapp-main)    echo "VALUES_OVERRIDE=-f ./helm/values-staging.yaml"  >> $GITHUB_ENV ;;
+            metaapp-uh)      echo "VALUES_OVERRIDE=-f ./helm/values-uh.yaml"       >> $GITHUB_ENV ;;
+            metaapp-oraboro) echo "VALUES_OVERRIDE=-f ./helm/values-oraboro.yaml"  >> $GITHUB_ENV ;;
+            metaapp-bc)      echo "VALUES_OVERRIDE=-f ./helm/values-bc.yaml"       >> $GITHUB_ENV ;;
+            *)               echo "VALUES_OVERRIDE="                               >> $GITHUB_ENV ;;
           esac
 
-      # redeploy by tag -------------------------------------------------
       - name: Redeploy with tag
         if: ${{ github.event.inputs.rollback_to_tag != '' }}
         run: |
@@ -258,7 +266,6 @@ jobs:
             --namespace "$NS" \
             -f "$VALUES_FILE" $VALUES_OVERRIDE
 
-      # rollback by history --------------------------------------------
       - name: Determine revision
         if: ${{ github.event.inputs.rollback_to_tag == '' }}
         id: rev
