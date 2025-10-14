@@ -33,7 +33,7 @@ async function bootstrap(): Promise<void> {
 
     const grpcOptions = configService.get(GRPC_LISTENER_CONFIG_KEY);
     if (!grpcOptions) {
-      throw new Error("gRPC listener config is missing");
+      throw new Error("gRPC listener config is missing ");
     }
 
     [grpcOptions, kafkaOptions].forEach((options) => app.connectMicroservice(options));
