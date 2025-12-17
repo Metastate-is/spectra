@@ -11,7 +11,6 @@ import {
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { cypher } from "src/utils/cypher";
 import { formatEventPayload } from "src/utils/kafka/format-event-created";
-import { ReputationContractService } from "../metastate/services/reputatoin-contract.service";
 
 @Injectable()
 export class OnchainService extends BaseMarkService<IOnchainMark> {
@@ -20,7 +19,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
   constructor(
     neo4jService: Neo4jService,
     private readonly kafkaService: KafkaService,
-    private readonly reputationContractService: ReputationContractService,
+    // private readonly reputationContractService: ReputationContractService,
   ) {
     super(neo4jService, OnchainService.name);
   }
@@ -28,14 +27,14 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
   async process(mark: IOnchainMark): Promise<boolean> {
     const isTrue = await super.process(mark);
 
-    if (isTrue) {
-      await this.reputationContractService.storeOrUpdateMark(
-        mark.fromParticipantId,
-        mark.toParticipantId,
-        mark.value,
-        mark.markType
-      );
-    }
+    // if (isTrue) {
+    //   await this.reputationContractService.storeOrUpdateMark(
+    //     mark.fromParticipantId,
+    //     mark.toParticipantId,
+    //     mark.value,
+    //     mark.markType
+    //   );
+    // }
 
     return isTrue;
   }

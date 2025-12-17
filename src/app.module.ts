@@ -8,7 +8,6 @@ import kafkaConfig from "./config/kafka.config";
 import loggerConfig from "./config/logger.config";
 import neo4jConfig from "./config/neo4j.config";
 import redisConfig from "./config/redis.config";
-import metastateConfig from "./config/metastate.config";
 import { KafkaModule } from "./core/kafka/kafka.module";
 import { LoggerModule } from "./core/logger";
 import { Neo4jModule } from "./core/neo4j/neo4j.module";
@@ -19,7 +18,6 @@ import { HealthModule } from "./modules/health/health.module";
 import { OffchainModule } from "./modules/offchain/offchain.module";
 import { OnchainModule } from "./modules/onchain/onchain.module";
 import { ReputationModule } from "./modules/reputation/reputation.module";
-import { MetastateModule } from "./modules/metastate/metastate.module";
 
 if (process.env.NODE_ENV === "test") {
   // Динамический импорт только в тестовой среде
@@ -29,7 +27,9 @@ if (process.env.NODE_ENV === "test") {
 
 const imports = [
   ConfigModule.forRoot({
-    load: [redisConfig, kafkaConfig, loggerConfig, neo4jConfig, grpcListenerConfig, metastateConfig],
+    load: [redisConfig, kafkaConfig, loggerConfig, neo4jConfig, grpcListenerConfig,
+      // metastateConfig 
+    ],
     isGlobal: true,
   }),
   // Добавляем модуль логирования
@@ -57,7 +57,8 @@ const imports = [
   OffchainModule,
   EventsModule,
   HealthModule,
-  MetastateModule
+  // @TODO: До лучших времен не трогаем
+  // MetastateModule
 ];
 
 @Module({

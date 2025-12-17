@@ -46,16 +46,16 @@ export const grpcListenerConfig = registerAs(GRPC_LISTENER_CONFIG_KEY, () => {
   );
   // const wrappersProto = join(googleProtoDir, 'google', 'protobuf', 'wrappers.proto');
 
-  // Проверка существования
-  [reputationProto, reputationCountProto, reputationChangelogProto].forEach((protoPath) => {
-    console.log("gRPC Config: Proto path:", protoPath);
-    if (fs.existsSync(protoPath)) {
-      console.log("gRPC Config: ✅ File exists");
-    } else {
-      console.error("gRPC Config: ❌ File NOT FOUND");
-      throw new Error(`Proto file not found: ${protoPath}`);
-    }
-  });
+  // // Проверка существования
+  // [reputationProto, reputationCountProto, reputationChangelogProto].forEach((protoPath) => {
+  //   console.log("gRPC Config: Proto path:", protoPath);
+  //   if (fs.existsSync(protoPath)) {
+  //     console.log("gRPC Config: ✅ File exists");
+  //   } else {
+  //     console.error("gRPC Config: ❌ File NOT FOUND");
+  //     throw new Error(`Proto file not found: ${protoPath}`);
+  //   }
+  // });
 
   // Загрузка ВСЕХ файлов в правильном порядке: сначала зависимости!
   const packageDefinition = protoLoader.loadSync(
