@@ -10,5 +10,5 @@ import { registerAs } from "@nestjs/config";
 export default registerAs("neo4j", () => ({
   url: process.env.NEO4_URL,
   user: process.env.NEO4J_USER || "neo4j",
-  password: process.env.NEO4J_PASSWORD || "55135513",
+  password: process.env.NEO4J_PASSWORD,
 }));

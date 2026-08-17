@@ -23,10 +23,11 @@ export class Neo4jModule {
               const user = configService.get<string>("neo4j.user");
               const password = configService.get<string>("neo4j.password");
 
-              const driver: Driver = neo4j.driver(
-                url,
-                neo4j.auth.basic(user as string, password as string),
-              );
+              if (!url || !user || !password) {
+                throw new Error("NEO4_URL, NEO4J_USER and NEO4J_PASSWORD are required");
+              }
+
+              const driver: Driver = neo4j.driver(url, neo4j.auth.basic(user, password));
 
               return driver;
             } catch (error) {

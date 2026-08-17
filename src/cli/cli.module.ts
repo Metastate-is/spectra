@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import neo4jConfig from "src/config/neo4j.config";
 import { Neo4jModule } from "src/core/neo4j/neo4j.module";
+import { ExportPostgresCommand } from "./commands/export-postgres.command";
 import { InitNeo4jCommand } from "./commands/init-neo4j.command";
 
 @Module({
@@ -11,8 +12,8 @@ import { InitNeo4jCommand } from "./commands/init-neo4j.command";
     }),
     Neo4jModule.forRootAsync(),
     // MetastateModule,
-    ConfigModule
+    ConfigModule,
   ],
-  providers: [InitNeo4jCommand],
+  providers: [InitNeo4jCommand, ExportPostgresCommand],
 })
 export class CliModule {}

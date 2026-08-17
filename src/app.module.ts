@@ -2,7 +2,6 @@ import { CacheModule } from "@nestjs/cache-manager";
 import { Module, NestModule, ValidationPipe } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_PIPE } from "@nestjs/core";
-import { AppController } from "./app.controller";
 import { grpcListenerConfig } from "./config/grpc.config";
 import internalHttpConfig from "./config/internal-http.config";
 import loggerConfig from "./config/logger.config";
@@ -68,7 +67,7 @@ const imports = [
 
 @Module({
   imports,
-  controllers: [AppController],
+  controllers: [],
   providers: [
     {
       provide: APP_PIPE,

@@ -80,7 +80,6 @@ configmap:
     PORT: 3000
     GRPC_SERVER_PORT: 50060
     NEO4_URL: neo4j://neo4j:7687
-    NEO4J_PASSWORD: LAh62KBEr3NImStd5kQw
     NEO4J_USER: neo4j
     RPC_URL: https://rpc-node.metastate.is/
     REPUTATION_CONTRACT_ADDRESS: 0x263dd68544fD8081a878103b2e601D8a85555370
