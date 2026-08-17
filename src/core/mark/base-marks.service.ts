@@ -86,7 +86,7 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
 
   protected abstract create(mark: TMark, tx: TransactionPromise): Promise<TMark>;
   protected abstract update(mark: TMark, tx: TransactionPromise): Promise<TMark>;
-  protected abstract sendEventCreateMark(mark: TMark, e?: Error): Promise<void>;
+  protected abstract sendEventCreateMark(mark: TMark): Promise<void>;
 
   constructor(
     protected readonly neo4jService: Neo4jService,
@@ -108,15 +108,15 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     try {
       await this.createParticipantIfNotExists(mark.fromParticipantId, tx);
       await this.createParticipantIfNotExists(mark.toParticipantId, tx);
-    
+
       const existing = await this.findOne(mark, tx);
-    
+
       if (existing) {
         upsertedMark = await this.update(mark, tx);
       } else {
         upsertedMark = await this.create(mark, tx);
       }
-    
+
       // Пишем Changelog после создания или обновления
       await tx.run(this.getReputationChangelogQuery(), {
         fromId: mark.fromParticipantId,
@@ -125,20 +125,18 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
         markType: mark.markType,
         onchain: this.onchain,
       });
-    
+
       await tx.commit();
       await this.sendEventCreateMark(upsertedMark);
-    
+
       return true;
     } catch (e) {
       this.logger.error("Error creating/updating mark", e);
       await tx.rollback();
-      await this.sendEventCreateMark(mark, e);
       return false;
     } finally {
       await session.close();
     }
-    
   }
 
   /**
@@ -342,36 +340,36 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
   /**
    * Получает количество положительных (`value = true`) и отрицательных (`value = false`) оценок,
    *      * Получает оценки типа "BusinessFeedback" (offchain) между двумя участниками:
-     * - от userA к userB
-     * - от userB к userA
-     *
-     * Пример
-    * user1 -> user2 
-    * 
-    * Мы должны найти между ними пользователя 
-    * Между ними пользователей должно быть 0
-    * 
-    * user2 -> user3
-    * user1 -> user4
-    * 
-    * Между ними пользователей должно быть user5
-    * user5 -> user1
-    * user5 -> user2
-    * 
-    * Между ними пользователей должно быть user5 и user6
-    * user1 -> user6
-    * user2 -> user6  
-    * 
-    * Независит какое значение true или false 
-    * Нужно найти само наличие связи
+   * - от userA к userB
+   * - от userB к userA
+   *
+   * Пример
+   * user1 -> user2
+   *
+   * Мы должны найти между ними пользователя
+   * Между ними пользователей должно быть 0
+   *
+   * user2 -> user3
+   * user1 -> user4
+   *
+   * Между ними пользователей должно быть user5
+   * user5 -> user1
+   * user5 -> user2
+   *
+   * Между ними пользователей должно быть user5 и user6
+   * user1 -> user6
+   * user2 -> user6
+   *
+   * Независит какое значение true или false
+   * Нужно найти само наличие связи
    */
   protected async getReputationCount(mark: TMark): Promise<IGetReputationCountResponse> {
-    try{
+    try {
       const commonParticipants = await this.findCommonParticipants(mark);
       const positive = commonParticipants.filter((p) => p.intermediateToTo === true).length;
       const negative = commonParticipants.filter((p) => p.intermediateToTo === false).length;
       const commonCount = commonParticipants.length;
-      
+
       return {
         positive,
         negative,
@@ -385,8 +383,8 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
 
   /**
    * Пишем Changelog для любой операции
-   * @param mark 
-   * @returns 
+   * @param mark
+   * @returns
    */
   private getReputationChangelogQuery(): string {
     return cypher /* cypher */`
@@ -405,36 +403,36 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
     `;
   }
 
-   /**
-     * Извлекает историю изменения "репутации" (changelog) между двумя участниками.
-     *
-     * Логика:
-     * - Ищем все узлы `Changelog`, созданные пользователем `from` (MADE_CHANGELOG).
-     * - Проверяем, что эти изменения относятся к пользователю `to` (APPLIES_TO).
-     * - Ограничиваем только теми `Changelog`, которые связаны с конкретным типом оценки (`MarkType`).
-     * - Возвращаем список изменений в порядке возрастания времени.
-     *
-     * Cypher-запрос:
-     * ```cypher
-     * MATCH (from:Participant {participantId: $userA})-[:MADE_CHANGELOG]->(cl:Changelog)
-     * MATCH (cl)-[:APPLIES_TO]->(to:Participant {participantId: $userB})
-     * MATCH (cl)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
-     * RETURN cl.createdAt AS createdAt,
-     *        cl.value AS value,
-     *        from.participantId AS participantId,
-     *        type.onchain AS onchain
-     * ORDER BY cl.createdAt ASC
-     * ```
-     *
-     * @param mark Объект `TMark`, содержащий информацию о:
-     *  - `fromParticipantId` — кто оставил метку
-     *  - `toParticipantId` — кому она оставлена
-     *  - `markType` — тип метки (например, "RelationMark", "TrustMark")
-     * @returns Массив объектов с историей изменений:
-     *  - `updatedAt` — время создания изменения
-     *  - `value` — значение (true/false или др.)
-     *  - `participantId` — идентификатор того, кто оставил изменение
-  */
+  /**
+   * Извлекает историю изменения "репутации" (changelog) между двумя участниками.
+   *
+   * Логика:
+   * - Ищем все узлы `Changelog`, созданные пользователем `from` (MADE_CHANGELOG).
+   * - Проверяем, что эти изменения относятся к пользователю `to` (APPLIES_TO).
+   * - Ограничиваем только теми `Changelog`, которые связаны с конкретным типом оценки (`MarkType`).
+   * - Возвращаем список изменений в порядке возрастания времени.
+   *
+   * Cypher-запрос:
+   * ```cypher
+   * MATCH (from:Participant {participantId: $userA})-[:MADE_CHANGELOG]->(cl:Changelog)
+   * MATCH (cl)-[:APPLIES_TO]->(to:Participant {participantId: $userB})
+   * MATCH (cl)-[:OF_TYPE]->(type:MarkType {name: $markType, onchain: $onchain})
+   * RETURN cl.createdAt AS createdAt,
+   *        cl.value AS value,
+   *        from.participantId AS participantId,
+   *        type.onchain AS onchain
+   * ORDER BY cl.createdAt ASC
+   * ```
+   *
+   * @param mark Объект `TMark`, содержащий информацию о:
+   *  - `fromParticipantId` — кто оставил метку
+   *  - `toParticipantId` — кому она оставлена
+   *  - `markType` — тип метки (например, "RelationMark", "TrustMark")
+   * @returns Массив объектов с историей изменений:
+   *  - `updatedAt` — время создания изменения
+   *  - `value` — значение (true/false или др.)
+   *  - `participantId` — идентификатор того, кто оставил изменение
+   */
   protected async getReputationChangelog(mark: TMark): Promise<IGetReputationChangelogResponse[]> {
     try {
       const query = cypher /* cypher */`
@@ -447,7 +445,7 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
           type.onchain AS onchain
         ORDER BY cl.createdAt ASC
       `;
-  
+
       const result = await this.neo4jService.runQuery(query, {
         userA: mark.fromParticipantId,
         userB: mark.toParticipantId,
@@ -456,7 +454,7 @@ export abstract class BaseMarkService<TMark extends IBaseMark> {
       });
 
       console.log("result", result);
-  
+
       return result.records.map((r) => ({
         updatedAt: r.get("createdAt").toString(),
         value: r.get("value"),

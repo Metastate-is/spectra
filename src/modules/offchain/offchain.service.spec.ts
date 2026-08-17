@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { InternalHttpService } from "src/core/internal-http/internal-http.service";
 import { IOffchainMark } from "src/core/iterface/offchain.interface";
-import { KafkaService } from "src/core/kafka/kafka.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { OffchainMarkTypeEnum } from "src/type";
 import { OffchainService } from "./offchain.service";
@@ -16,7 +16,7 @@ describe("OffchainService", () => {
     value: true,
   };
 
-  const mockKafkaService = {
+  const mockInternalHttpService = {
     sendMarkCreated: jest.fn(),
   };
 
@@ -40,7 +40,7 @@ describe("OffchainService", () => {
       providers: [
         OffchainService,
         { provide: Neo4jService, useValue: mockNeo4jService },
-        { provide: KafkaService, useValue: mockKafkaService },
+        { provide: InternalHttpService, useValue: mockInternalHttpService },
       ],
     }).compile();
 
@@ -75,13 +75,13 @@ describe("OffchainService", () => {
           ],
         }) // create mark
         .mockResolvedValueOnce({}); // createChangelog
-    
+
       const result = await service.process(mockMark);
-    
+
       expect(result).toBe(true);
-    
+
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-    
+
       // Проверяем, что Changelog создаётся после create
       expect(mockTx.run).toHaveBeenNthCalledWith(
         5,
@@ -93,15 +93,14 @@ describe("OffchainService", () => {
           markType: mockMark.markType,
         }),
       );
-    
+
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
-    
 
     it("should update mark if already exists", async () => {
       const existingMark = { id: "some-id", value: true };
-    
+
       mockTx.run
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (from)
         .mockResolvedValueOnce({}) // createParticipantIfNotExists (to)
@@ -130,23 +129,22 @@ describe("OffchainService", () => {
           ],
         }) // update mark
         .mockResolvedValueOnce({}); // createChangelog
-    
+
       const markToUpdate = { ...mockMark, value: false };
       const result = await service.process(markToUpdate);
-    
+
       expect(result).toBe(true);
-    
+
       expect(mockTx.run).toHaveBeenCalledWith(
         expect.stringContaining("SET mark.value = $value"),
         expect.objectContaining({ value: false }),
       );
-    
+
       expect(mockTx.run).toHaveBeenCalledTimes(5);
-    
+
       expect(mockTx.commit).toHaveBeenCalled();
       expect(mockSession.close).toHaveBeenCalled();
     });
-    
 
     it("should rollback if error thrown", async () => {
       mockTx.run.mockImplementationOnce(() => {

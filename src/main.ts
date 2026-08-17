@@ -26,16 +26,12 @@ async function bootstrap(): Promise<void> {
     const configService = await app.resolve(ConfigService);
     const port = configService.get<number>("PORT", 3004);
 
-    const kafkaOptions = configService.get("kafka").getClientOptions({
-      createPartitioner: require("kafkajs").Partitioners.LegacyPartitioner,
-    });
-
     const grpcOptions = configService.get(GRPC_LISTENER_CONFIG_KEY);
     if (!grpcOptions) {
       throw new Error("gRPC listener config is missing");
     }
 
-    [grpcOptions, kafkaOptions].forEach((options) => app.connectMicroservice(options));
+    app.connectMicroservice(grpcOptions);
 
     await app.startAllMicroservices();
     l.info("All microservices started successfully");

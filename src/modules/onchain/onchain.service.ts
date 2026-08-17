@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { TransactionPromise } from "neo4j-driver-core";
+import { InternalHttpService } from "src/core/internal-http/internal-http.service";
 import { IOnchainMark } from "src/core/iterface/onchain.interface";
-import { KafkaService } from "src/core/kafka/kafka.service";
 import {
   BaseMarkService,
   IGetReputationChangelogResponse,
@@ -10,7 +10,7 @@ import {
 } from "src/core/mark/base-marks.service";
 import { Neo4jService } from "src/core/neo4j/neo4j.service";
 import { cypher } from "src/utils/cypher";
-import { formatEventPayload } from "src/utils/kafka/format-event-created";
+import { formatEventPayload } from "src/utils/format-mark-created";
 
 @Injectable()
 export class OnchainService extends BaseMarkService<IOnchainMark> {
@@ -18,7 +18,7 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
 
   constructor(
     neo4jService: Neo4jService,
-    private readonly kafkaService: KafkaService,
+    private readonly internalHttpService: InternalHttpService,
     // private readonly reputationContractService: ReputationContractService,
   ) {
     super(neo4jService, OnchainService.name);
@@ -149,11 +149,11 @@ export class OnchainService extends BaseMarkService<IOnchainMark> {
     }
   }
 
-  protected async sendEventCreateMark(mark: IOnchainMark, e?: Error): Promise<void> {
+  protected async sendEventCreateMark(mark: IOnchainMark): Promise<void> {
     try {
-      const payload = formatEventPayload(mark, mark.markType, this.onchain, e);
+      const payload = formatEventPayload(mark, mark.markType, this.onchain);
 
-      await this.kafkaService.sendMarkCreated(payload);
+      await this.internalHttpService.sendMarkCreated(payload);
 
       this.logger.log("Mark created message sent successfully", {
         meta: { payload },

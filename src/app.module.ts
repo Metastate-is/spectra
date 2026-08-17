@@ -4,11 +4,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_PIPE } from "@nestjs/core";
 import { AppController } from "./app.controller";
 import { grpcListenerConfig } from "./config/grpc.config";
-import kafkaConfig from "./config/kafka.config";
+import internalHttpConfig from "./config/internal-http.config";
 import loggerConfig from "./config/logger.config";
 import neo4jConfig from "./config/neo4j.config";
 import redisConfig from "./config/redis.config";
-import { KafkaModule } from "./core/kafka/kafka.module";
+import { InternalHttpModule } from "./core/internal-http/internal-http.module";
 import { LoggerModule } from "./core/logger";
 import { Neo4jModule } from "./core/neo4j/neo4j.module";
 import { RedisModule } from "./core/redis/redis.module";
@@ -27,8 +27,13 @@ if (process.env.NODE_ENV === "test") {
 
 const imports = [
   ConfigModule.forRoot({
-    load: [redisConfig, kafkaConfig, loggerConfig, neo4jConfig, grpcListenerConfig,
-      // metastateConfig 
+    load: [
+      redisConfig,
+      internalHttpConfig,
+      loggerConfig,
+      neo4jConfig,
+      grpcListenerConfig,
+      // metastateConfig
     ],
     isGlobal: true,
   }),
@@ -49,7 +54,7 @@ const imports = [
     inject: [ConfigService],
     isGlobal: true,
   }),
-  KafkaModule,
+  InternalHttpModule,
   RedisModule,
   Neo4jModule.forRootAsync(),
   ReputationModule,

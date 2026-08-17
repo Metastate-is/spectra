@@ -1,7 +1,14 @@
-import { KAFKA_TOPICS } from "@metastate-is/proto-models";
 import { MarkRequest } from "@metastate-is/proto-models/generated/metastate/kafka/spectra/v1/mark_request";
-import { Controller } from "@nestjs/common";
-import { MessagePattern } from "@nestjs/microservices";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  HttpCode,
+  InternalServerErrorException,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
+import { InternalApiGuard } from "src/core/internal-http/internal-api.guard";
 import { StructuredLoggerService } from "src/core/logger";
 import { OffchainMarkTypeMap, OnchainMarkTypeMap } from "src/type";
 import { isValidOffchainMarkType, isValidOnchainMarkType } from "src/utils/validations";
@@ -9,7 +16,13 @@ import { OffchainService } from "../offchain/offchain.service";
 import { OnchainService } from "../onchain/onchain.service";
 import { EventsCache } from "./events-cache";
 
-@Controller()
+export interface MarkRequestResult {
+  duplicate?: boolean;
+  processed: boolean;
+}
+
+@Controller("internal/marks")
+@UseGuards(InternalApiGuard)
 export class MarkHandler {
   private readonly logger = new StructuredLoggerService();
 
@@ -21,9 +34,9 @@ export class MarkHandler {
     this.logger.setContext(MarkHandler.name);
   }
 
-  @MessagePattern(KAFKA_TOPICS.SPECTRA.MARK.REQUEST)
-  async handleMarkRequestEvent(data: MarkRequest) {
-    console.log("handleMarkRequestEvent", data);
+  @Post()
+  @HttpCode(200)
+  async handleMarkRequestEvent(@Body() data: MarkRequest): Promise<MarkRequestResult> {
     // Инициализируем трассировку для этого запроса
     // traceId нужен только для инициализации, но не для логов (будет добавлен через mixin)
     this.logger.startTrace();
@@ -33,13 +46,15 @@ export class MarkHandler {
       },
     });
 
+    let eventClaimed = false;
     try {
-      // Получаем дату и записываем ее в Кэш
-      // если запись уже есть - игнорируем ее
-      if (data.metadata) {
-        const exist = await this.eventsCache.checkAndSetEventId(data.metadata);
-        if (exist) return;
+      if (!data.metadata?.eventId) {
+        throw new BadRequestException("metadata.eventId is required");
       }
+
+      const exists = await this.eventsCache.checkAndSetEventId(data.metadata);
+      if (exists) return { duplicate: true, processed: true };
+      eventClaimed = true;
 
       this.logger.log("Processing mark request event", {
         meta: {
@@ -55,20 +70,28 @@ export class MarkHandler {
             data,
           },
         });
-        return;
+        throw new BadRequestException("Participant IDs are required");
       }
 
       if (typeof data.value !== "boolean") {
         this.logger.warn("Invalid mark value", { meta: { data } });
-        return;
+        throw new BadRequestException("Mark value must be boolean");
       }
 
       // Находим тип марки по полю is_onchain
       // чтобы определить какой enum использовать для получения события
 
-      await this.processMark(data);
+      const processed = await this.processMark(data);
+      if (!processed) {
+        throw new InternalServerErrorException("Mark was not processed");
+      }
+      return { processed: true };
     } catch (error) {
       this.logger.error("Error processing mark request event", error as Error);
+      if (eventClaimed && data.metadata) {
+        await this.eventsCache.forgetEventId(data.metadata);
+      }
+      throw error;
     } finally {
       this.logger.endTrace();
     }
@@ -83,8 +106,10 @@ export class MarkHandler {
       });
 
       if (data.isOnchain) {
-        if (data.onchainMarkType && !isValidOnchainMarkType(data.onchainMarkType)) {
-          return this.logMarkTypeError("onchain", data);
+        const onchainMarkType = data.onchainMarkType;
+        if (typeof onchainMarkType !== "number" || !isValidOnchainMarkType(onchainMarkType)) {
+          this.logMarkTypeError("onchain", data);
+          throw new BadRequestException("Unknown onchain mark type");
         }
 
         this.logger.log("Processing onchain mark event", {
@@ -96,44 +121,46 @@ export class MarkHandler {
         const result = await this.onchainService.process({
           fromParticipantId: data.fromParticipantId,
           toParticipantId: data.toParticipantId,
-          markType: OnchainMarkTypeMap[data.onchainMarkType as keyof typeof OnchainMarkTypeMap]!,
+          markType: OnchainMarkTypeMap[onchainMarkType]!,
           value: data.value,
         });
 
         if (!result) {
           this.logger.debug("Error processing onchain mark", { meta: { data } });
         }
-      } else {
-        if (data.offchainMarkType && !isValidOffchainMarkType(data.offchainMarkType)) {
-          return this.logMarkTypeError("offchain", data);
-        }
-
-        this.logger.log("Processing offchain mark event", {
-          meta: {
-            data,
-          },
-        });
-
-        const result = await this.offchainService.process({
-          fromParticipantId: data.fromParticipantId,
-          toParticipantId: data.toParticipantId,
-          markType: OffchainMarkTypeMap[data.offchainMarkType as keyof typeof OffchainMarkTypeMap]!,
-          value: data.value,
-        });
-
-        if (!result) {
-          this.logger.debug("Error processing request offchain mark", { meta: { data } });
-        }
+        return result;
       }
+
+      const offchainMarkType = data.offchainMarkType;
+      if (typeof offchainMarkType !== "number" || !isValidOffchainMarkType(offchainMarkType)) {
+        this.logMarkTypeError("offchain", data);
+        throw new BadRequestException("Unknown offchain mark type");
+      }
+
+      this.logger.log("Processing offchain mark event", {
+        meta: {
+          data,
+        },
+      });
+
+      const result = await this.offchainService.process({
+        fromParticipantId: data.fromParticipantId,
+        toParticipantId: data.toParticipantId,
+        markType: OffchainMarkTypeMap[offchainMarkType]!,
+        value: data.value,
+      });
+
+      if (!result) {
+        this.logger.debug("Error processing request offchain mark", { meta: { data } });
+      }
+      return result;
     } catch (e) {
       this.logger.error("Error processing mark event", e as Error);
       throw e;
     }
   }
 
-  private logMarkTypeError(type: "onchain" | "offchain", data: MarkRequest): boolean {
+  private logMarkTypeError(type: "onchain" | "offchain", data: MarkRequest): void {
     this.logger.warn(`Unknown ${type} mark type`, { meta: { data } });
-
-    return false;
   }
 }

@@ -43,7 +43,6 @@
 		"class-validator": "^0.14.2",
 		"ethers": "^6.15.0",
 		"google-proto-files": "^5.0.0",
-		"kafkajs": "^2.2.4",
 		"ksuid": "^3.0.0",
 		"lodash": "^4.17.21",
 		"neo4j-driver": "^5.28.1",

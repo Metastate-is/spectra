@@ -4,48 +4,40 @@ import {
   OffchainMarkTypeMapInx,
   OnchainMarkTypeEnum,
   OnchainMarkTypeMapInx,
-} from "../../type";
+} from "../type";
 
 export const formatEventPayload = (
   mark: any,
   markType: OffchainMarkTypeEnum | OnchainMarkTypeEnum,
   onchain: boolean,
-  e?: Error,
 ): MarkCreated => {
   const KSUID = require("ksuid");
-  const eventId = KSUID.randomSync().string;
-
   const payload: MarkCreated = {
     fromParticipantId: mark.fromParticipantId,
     toParticipantId: mark.toParticipantId,
     isOnchain: onchain,
     value: mark.value,
     metadata: {
-      eventId: eventId,
+      eventId: KSUID.randomSync().string,
       schemaVersion: "1.0.0",
       eventTime: { milliseconds: Date.now() },
     },
   };
 
   if (onchain) {
-    payload.onchainMarkType = OnchainMarkTypeMapInx[markType]; 
+    payload.onchainMarkType = OnchainMarkTypeMapInx[markType];
   } else {
     payload.offchainMarkType = OffchainMarkTypeMapInx[markType];
   }
 
-  if (e) {
-    payload.error = {
-      message: e.message,
-      code: (e as any).code ?? "UNKNOWN",
-      details: JSON.stringify({
-        name: e.name,
-        stack: e.stack,
-      }),
-    };
-  } else {
-    if (mark.id && mark.createdAt) {
+  if (mark.id && mark.createdAt) {
+    const createdAt =
+      typeof mark.createdAt.toStandardDate === "function"
+        ? mark.createdAt.toStandardDate().getTime()
+        : new Date(mark.createdAt).getTime();
+    if (Number.isFinite(createdAt)) {
       payload.id = mark.id;
-      payload.createdAt = { milliseconds: mark.createdAt.toStandardDate().getTime() };
+      payload.createdAt = { milliseconds: createdAt };
     }
   }
 

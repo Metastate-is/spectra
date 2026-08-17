@@ -46,7 +46,5 @@ USER nestjs
 
 # Устанавливаем переменные окружения (добавьте свои, если нужно; в K8s они из configmap)
 ENV NODE_ENV=production
-ENV KAFKA_DISABLED=false
-
 # ENTRYPOINT для init и запуска
 ENTRYPOINT ["/app/entrypoint.sh"]
