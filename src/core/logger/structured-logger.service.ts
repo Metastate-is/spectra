@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { Injectable, LoggerService, OnModuleDestroy, Scope } from "@nestjs/common";
-import { context, trace } from "@opentelemetry/api";
 import type { LoggerOptions, StructuredLogger } from "./logger.interface";
 
 // Типы из библиотеки pino (TypeScript не может найти их автоматически)
@@ -8,11 +7,11 @@ type PinoLogger = any;
 type PinoLoggerOptions = any;
 
 /**
- * Structured Logger Service with Pino and OpenTelemetry integration
+ * Structured Logger Service with Pino correlation IDs
  *
  * Features:
  * - Pino-based high-performance JSON-formatted structured logs
- * - OpenTelemetry integration with trace_id support
+ * - Request correlation with trace_id support
  * - Context tracking for operation sequences
  * - Three log levels only: debug, info, error
  * - Child loggers for persistent metadata context
@@ -179,7 +178,7 @@ export class StructuredLoggerService implements LoggerService, StructuredLogger,
 
   /**
    * Start a new trace or use the existing one
-   * Integrates with OpenTelemetry if available
+   * Creates correlation identifiers for the current logical operation
    */
   startTrace(): void {
     // Если трассировка уже запущена, просто выходим
@@ -187,25 +186,12 @@ export class StructuredLoggerService implements LoggerService, StructuredLogger,
       return;
     }
 
-    // Пытаемся получить текущий спан из контекста OpenTelemetry
-    const span = trace.getSpan(context.active());
-
-    if (span) {
-      // Если спан существует, извлекаем traceId и spanId из него
-      const spanContext = span.spanContext();
-      this.traceId = spanContext.traceId;
-      this.spanId = spanContext.spanId;
-    } else {
-      // Если OpenTelemetry не используется или нет активного спана,
-      // создаем уникальные идентификаторы
-      this.traceId = randomUUID();
-      this.spanId = randomUUID();
-    }
+    this.traceId = randomUUID();
+    this.spanId = randomUUID();
   }
 
   /**
    * End the current trace
-   * If the trace was linked to OpenTelemetry span, it will not end the span
    */
   endTrace(): void {
     this.traceId = null;
